@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Leaf Brothers — Member Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root {
+    --gold: #C9A84C;
+    --gold-dim: #8a6f2e;
+    --gold-glow: rgba(201,168,76,0.15);
+    --cream: #F5EDD6;
+    --dark1: #0A0804;
+    --dark2: #0E0B07;
+    --dark3: #1A1510;
+    --dark4: #231C12;
+    --dark5: #2e2416;
+    --ember: #B5451B;
+    --green: #2d6a4f;
+    --green-light: #52b788;
+    --red: #9b2226;
+    --red-light: #e63946;
+    --yellow: #7b5e00;
+    --yellow-light: #ffd166;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--dark1);
+    color: var(--cream);
+    font-family: 'Cormorant Garamond', serif;
+    min-height: 100vh;
+  }
+
+  /* ── LOGIN SCREEN ── */
+  #login-screen {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: 
+      radial-gradient(ellipse at 50% 0%, rgba(201,168,76,0.08) 0%, transparent 60%),
+      var(--dark1);
+  }
+
+  .login-box {
+    width: 360px;
+    padding: 52px 44px;
+    border: 1px solid rgba(201,168,76,0.2);
+    background: var(--dark3);
+    text-align: center;
+    position: relative;
+  }
+
+  .login-box::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(201,168,76,0.05) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .login-emblem {
+    font-family: 'Cinzel Decorative', serif;
+    font-size: 11px;
+    letter-spacing: 0.3em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .login-title {
+    font-family: 'Cinzel', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.05em;
+    margin-bottom: 36px;
+  }
+
+  .login-input {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--dark1);
+    border: 1px solid rgba(201,168,76,0.25);
+    color: var(--cream);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 16px;
+    letter-spacing: 0.1em;
+    outline: none;
+    margin-bottom: 16px;
+    transition: border-color 0.2s;
+  }
+
+  .login-input:focus { border-color: var(--gold); }
+
+  .login-btn {
+    width: 100%;
+    padding: 13px;
+    background: var(--gold);
+    color: var(--dark1);
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+
+  .login-btn:hover { background: #e0b84e; }
+  .login-btn:active { transform: scale(0.98); }
+
+  .login-error {
+    margin-top: 14px;
+    color: var(--red-light);
+    font-size: 13px;
+    font-style: italic;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .login-error.show { opacity: 1; }
+
+  /* ── DASHBOARD ── */
+  #dashboard { display: none; }
+
+  .top-bar {
+    background: var(--dark3);
+    border-bottom: 1px solid rgba(201,168,76,0.15);
+    padding: 0 40px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .top-bar-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .top-bar-title {
+    font-family: 'Cinzel', serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+  }
+
+  .top-bar-sub {
+    font-size: 12px;
+    color: var(--gold-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .logout-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--gold-dim);
+    background: none;
+    border: 1px solid rgba(201,168,76,0.2);
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  .logout-btn:hover { color: var(--gold); border-color: var(--gold); }
+
+  .main {
+    padding: 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 36px;
+  }
+
+  .stat-card {
+    background: var(--dark3);
+    border: 1px solid rgba(201,168,76,0.12);
+    padding: 20px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gold);
+    opacity: 0.3;
+  }
+
+  .stat-card.active::after { background: var(--green-light); opacity: 0.6; }
+  .stat-card.cancelled::after { background: var(--red-light); opacity: 0.6; }
+  .stat-card.suspended::after { background: var(--yellow-light); opacity: 0.6; }
+
+  .stat-n {
+    font-family: 'Cinzel', serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--gold);
+    display: block;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-l {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--gold-dim);
+    text-transform: uppercase;
+  }
+
+  /* ── CONTROLS ── */
+  .controls {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 220px;
+  }
+
+  .search-input {
+    width: 100%;
+    padding: 10px 16px 10px 38px;
+    background: var(--dark3);
+    border: 1px solid rgba(201,168,76,0.2);
+    color: var(--cream);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-input:focus { border-color: var(--gold); }
+  .search-input::placeholder { color: rgba(245,237,214,0.3); }
+
+  .search-icon {
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    color: var(--gold-dim);
+    font-size: 14px;
+  }
+
+  .filter-select {
+    padding: 10px 14px;
+    background: var(--dark3);
+    border: 1px solid rgba(201,168,76,0.2);
+    color: var(--cream);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    outline: none;
+    cursor: pointer;
+    min-width: 160px;
+  }
+
+  .filter-select:focus { border-color: var(--gold); }
+
+  .add-btn {
+    padding: 10px 22px;
+    background: var(--gold);
+    color: var(--dark1);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+  }
+
+  .add-btn:hover { background: #e0b84e; }
+
+  .refresh-btn {
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid rgba(201,168,76,0.2);
+    color: var(--gold-dim);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .refresh-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    border: 1px solid rgba(201,168,76,0.12);
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  thead {
+    background: var(--dark4);
+    border-bottom: 1px solid rgba(201,168,76,0.2);
+  }
+
+  th {
+    font-family: 'Cinzel', serif;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    padding: 14px 16px;
+    text-align: left;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+  }
+
+  th:hover { color: var(--gold); }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(201,168,76,0.07);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: rgba(201,168,76,0.04); }
+
+  td {
+    padding: 14px 16px;
+    font-size: 15px;
+    color: var(--cream);
+    white-space: nowrap;
+  }
+
+  td.name { font-weight: 400; }
+  td.email { color: rgba(245,237,214,0.6); font-size: 13px; }
+  td.phone { color: rgba(245,237,214,0.6); font-size: 13px; }
+
+  .tier-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: 1px solid rgba(201,168,76,0.3);
+    color: var(--gold);
+    background: rgba(201,168,76,0.06);
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 2px;
+    font-family: 'Cinzel', serif;
+    font-weight: 600;
+  }
+
+  .status-badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-active {
+    color: var(--green-light);
+    background: rgba(82,183,136,0.1);
+    border: 1px solid rgba(82,183,136,0.25);
+  }
+  .status-active::before { background: var(--green-light); }
+
+  .status-cancelled {
+    color: var(--red-light);
+    background: rgba(230,57,70,0.1);
+    border: 1px solid rgba(230,57,70,0.25);
+  }
+  .status-cancelled::before { background: var(--red-light); }
+
+  .status-suspended {
+    color: var(--yellow-light);
+    background: rgba(255,209,102,0.1);
+    border: 1px solid rgba(255,209,102,0.25);
+  }
+  .status-suspended::before { background: var(--yellow-light); }
+
+  .locker-val {
+    font-family: 'Cinzel', serif;
+    font-size: 13px;
+    color: var(--gold);
+  }
+
+  .locker-none { color: rgba(245,237,214,0.25); font-style: italic; font-size: 13px; }
+
+  .action-btn {
+    background: none;
+    border: 1px solid rgba(201,168,76,0.2);
+    color: var(--gold-dim);
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    padding: 4px 10px;
+    cursor: pointer;
+    margin-right: 6px;
+    text-transform: uppercase;
+    transition: all 0.15s;
+  }
+
+  .action-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .action-btn.danger:hover { border-color: var(--red-light); color: var(--red-light); }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: rgba(245,237,214,0.3);
+    font-style: italic;
+    font-size: 16px;
+  }
+
+  /* ── MODAL ── */
+  .modal-bg {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-bg.open { display: flex; }
+
+  .modal {
+    background: var(--dark3);
+    border: 1px solid rgba(201,168,76,0.25);
+    padding: 44px;
+    width: 480px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .modal-title {
+    font-family: 'Cinzel', serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gold);
+    letter-spacing: 0.1em;
+    margin-bottom: 28px;
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px; right: 16px;
+    background: none;
+    border: none;
+    color: var(--gold-dim);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    transition: color 0.2s;
+  }
+
+  .modal-close:hover { color: var(--gold); }
+
+  .field-group {
+    margin-bottom: 18px;
+  }
+
+  .field-label {
+    display: block;
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    margin-bottom: 6px;
+  }
+
+  .field-input, .field-select {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--dark1);
+    border: 1px solid rgba(201,168,76,0.2);
+    color: var(--cream);
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field-input:focus, .field-select:focus { border-color: var(--gold); }
+
+  .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  .modal-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 28px;
+  }
+
+  .modal-save {
+    flex: 1;
+    padding: 12px;
+    background: var(--gold);
+    color: var(--dark1);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .modal-save:hover { background: #e0b84e; }
+
+  .modal-cancel {
+    padding: 12px 20px;
+    background: transparent;
+    border: 1px solid rgba(201,168,76,0.2);
+    color: var(--gold-dim);
+    font-family: 'Cinzel', serif;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .modal-cancel:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* ── GOLD DIVIDER ── */
+  .gold-bar { width: 40px; height: 1px; background: var(--gold); opacity: 0.4; margin: 8px 0 20px; }
+
+  /* ── LOADING ── */
+  .loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--gold-dim);
+    font-style: italic;
+    font-size: 15px;
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 20px; height: 20px;
+    border: 2px solid rgba(201,168,76,0.2);
+    border-top-color: var(--gold);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin-right: 10px;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .toast {
+    position: fixed;
+    bottom: 30px; right: 30px;
+    background: var(--dark4);
+    border: 1px solid rgba(201,168,76,0.3);
+    color: var(--cream);
+    padding: 14px 22px;
+    font-size: 14px;
+    font-style: italic;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.3s;
+    z-index: 300;
+    pointer-events: none;
+  }
+
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-emblem">Leaf Brothers Cigars</div>
+    <div class="login-title">Member Administration</div>
+    <div class="gold-bar" style="margin:0 auto 28px;"></div>
+    <input type="password" id="pw-input" class="login-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">Access Dashboard</button>
+    <div class="login-error" id="login-error">Incorrect password. Try again.</div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <div>
+        <div class="top-bar-title">Leaf Brothers Cigars</div>
+        <div class="top-bar-sub">Member Administration</div>
+      </div>
+    </div>
+    <button class="logout-btn" onclick="doLogout()">Log Out</button>
+  </div>
+
+  <div class="main">
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-card">
+        <span class="stat-n" id="stat-total">—</span>
+        <span class="stat-l">Total Members</span>
+      </div>
+      <div class="stat-card active">
+        <span class="stat-n" id="stat-active">—</span>
+        <span class="stat-l">Active</span>
+      </div>
+      <div class="stat-card cancelled">
+        <span class="stat-n" id="stat-cancelled">—</span>
+        <span class="stat-l">Cancelled</span>
+      </div>
+      <div class="stat-card suspended">
+        <span class="stat-n" id="stat-suspended">—</span>
+        <span class="stat-l">Suspended</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-n" id="stat-lockers">—</span>
+        <span class="stat-l">Lockers Assigned</span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input type="text" id="search-input" class="search-input" placeholder="Search by name, email, or phone..." oninput="renderTable()">
+      </div>
+      <select id="filter-status" class="filter-select" onchange="renderTable()">
+        <option value="">All Statuses</option>
+        <option value="active">Active</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="suspended">Suspended</option>
+      </select>
+      <select id="filter-tier" class="filter-select" onchange="renderTable()">
+        <option value="">All Tiers</option>
+        <option value="select">Select Member</option>
+        <option value="lounge">Lounge Member</option>
+        <option value="lounge-premium">Lounge Premium</option>
+        <option value="half-locker">Half Locker</option>
+        <option value="locker">Locker Member</option>
+      </select>
+      <button class="refresh-btn" onclick="loadMembers()">↻ Refresh</button>
+      <button class="add-btn" onclick="openAddModal()">+ Add Member</button>
+    </div>
+
+    <!-- Table -->
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortBy('name')">Name</th>
+            <th onclick="sortBy('email')">Email</th>
+            <th onclick="sortBy('phone')">Phone</th>
+            <th onclick="sortBy('tier')">Tier</th>
+            <th onclick="sortBy('status')">Status</th>
+            <th onclick="sortBy('locker_number')">Locker</th>
+            <th onclick="sortBy('join_date')">Joined</th>
+            <th onclick="sortBy('renewal_date')">Renewal</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="member-tbody">
+          <tr><td colspan="9"><div class="loading"><span class="spinner"></span>Loading members...</div></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-bg" id="member-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-title" id="modal-title">Add Member</div>
+    <input type="hidden" id="edit-id">
+
+    <div class="modal-grid">
+      <div class="field-group">
+        <label class="field-label">Full Name</label>
+        <input type="text" id="f-name" class="field-input" placeholder="John Smith">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Phone</label>
+        <input type="text" id="f-phone" class="field-input" placeholder="(515) 000-0000">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Email</label>
+      <input type="email" id="f-email" class="field-input" placeholder="john@example.com">
+    </div>
+
+    <div class="modal-grid">
+      <div class="field-group">
+        <label class="field-label">Membership Tier</label>
+        <select id="f-tier" class="field-select">
+          <option value="select">Select Member — $15/mo</option>
+          <option value="lounge">Lounge Member — $39/mo</option>
+          <option value="lounge-premium">Lounge Premium — $49/mo</option>
+          <option value="half-locker">Half Locker — $59/mo</option>
+          <option value="locker">Locker Member — $69/mo</option>
+        </select>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Status</label>
+        <select id="f-status" class="field-select">
+          <option value="active">Active</option>
+          <option value="suspended">Suspended</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="modal-grid">
+      <div class="field-group">
+        <label class="field-label">Locker Number</label>
+        <input type="text" id="f-locker" class="field-input" placeholder="e.g. A12">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Join Date</label>
+        <input type="date" id="f-join" class="field-input">
+      </div>
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Renewal Date</label>
+      <input type="date" id="f-renewal" class="field-input">
+    </div>
+
+    <div class="modal-actions">
+      <button class="modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-save" onclick="saveMember()">Save Member</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──────────────────────────────────────────────
+// IMPORTANT: Replace these with your actual Supabase credentials
+const SUPABASE_URL = 'https://afvnjekuiyhtjubphnuc.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmdm5qZWt1aXlodGp1YnBobnVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNDc1NjMsImV4cCI6MjA4ODgyMzU2M30.Z_D-uWotbQs37oHSidZdgKlZjJqr6v4-i4e-1jbyQNE';
+const ADMIN_PASSWORD = 'L3afBr0th3r$2026'; // Change this to a strong password
+
+// ────────────────────────────────────────────────────────
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let allMembers = [];
+let sortCol = 'join_date';
+let sortAsc = false;
+
+// ── AUTH ─────────────────────────────────────────────────
+function doLogin() {
+  const val = document.getElementById('pw-input').value;
+  if (val === ADMIN_PASSWORD) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadMembers();
+  } else {
+    const err = document.getElementById('login-error');
+    err.classList.add('show');
+    document.getElementById('pw-input').value = '';
+    setTimeout(() => err.classList.remove('show'), 3000);
+  }
+}
+
+function doLogout() {
+  document.getElementById('dashboard').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('pw-input').value = '';
+}
+
+// ── DATA ─────────────────────────────────────────────────
+async function loadMembers() {
+  const tbody = document.getElementById('member-tbody');
+  tbody.innerHTML = '<tr><td colspan="9"><div class="loading"><span class="spinner"></span>Loading members...</div></td></tr>';
+
+  const { data, error } = await db.from('members').select('*').order('join_date', { ascending: false });
+
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="9"><div class="loading">Error loading members: ${error.message}</div></td></tr>`;
+    return;
+  }
+
+  allMembers = data || [];
+  updateStats();
+  renderTable();
+}
+
+function updateStats() {
+  document.getElementById('stat-total').textContent = allMembers.length;
+  document.getElementById('stat-active').textContent = allMembers.filter(m => m.status === 'active').length;
+  document.getElementById('stat-cancelled').textContent = allMembers.filter(m => m.status === 'cancelled').length;
+  document.getElementById('stat-suspended').textContent = allMembers.filter(m => m.status === 'suspended').length;
+  document.getElementById('stat-lockers').textContent = allMembers.filter(m => m.locker_number).length;
+}
+
+function renderTable() {
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const statusFilter = document.getElementById('filter-status').value;
+  const tierFilter = document.getElementById('filter-tier').value;
+
+  let filtered = allMembers.filter(m => {
+    const matchSearch = !search ||
+      (m.name || '').toLowerCase().includes(search) ||
+      (m.email || '').toLowerCase().includes(search) ||
+      (m.phone || '').toLowerCase().includes(search);
+    const matchStatus = !statusFilter || m.status === statusFilter;
+    const matchTier = !tierFilter || m.tier === tierFilter;
+    return matchSearch && matchStatus && matchTier;
+  });
+
+  // Sort
+  filtered.sort((a, b) => {
+    let av = a[sortCol] || '', bv = b[sortCol] || '';
+    if (av < bv) return sortAsc ? -1 : 1;
+    if (av > bv) return sortAsc ? 1 : -1;
+    return 0;
+  });
+
+  const tbody = document.getElementById('member-tbody');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No members found.</div></td></tr>';
+    return;
+  }
+
+  const TIER_LABELS = {
+    'select': 'Select',
+    'lounge': 'Lounge',
+    'lounge-premium': 'Lounge Premium',
+    'half-locker': 'Half Locker',
+    'locker': 'Locker',
+  };
+
+  tbody.innerHTML = filtered.map(m => `
+    <tr>
+      <td class="name">${esc(m.name || '—')}</td>
+      <td class="email">${esc(m.email || '—')}</td>
+      <td class="phone">${esc(m.phone || '—')}</td>
+      <td><span class="tier-badge">${TIER_LABELS[m.tier] || esc(m.tier) || '—'}</span></td>
+      <td><span class="status-badge status-${m.status || 'active'}">${m.status || 'active'}</span></td>
+      <td>${m.locker_number ? `<span class="locker-val">${esc(m.locker_number)}</span>` : '<span class="locker-none">—</span>'}</td>
+      <td>${fmtDate(m.join_date)}</td>
+      <td>${fmtDate(m.renewal_date)}</td>
+      <td>
+        <button class="action-btn" onclick="openEditModal('${m.id}')">Edit</button>
+        <button class="action-btn danger" onclick="deleteMember('${m.id}', '${esc(m.name)}')">Remove</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function sortBy(col) {
+  if (sortCol === col) sortAsc = !sortAsc;
+  else { sortCol = col; sortAsc = true; }
+  renderTable();
+}
+
+// ── MODAL ─────────────────────────────────────────────────
+function openAddModal() {
+  document.getElementById('modal-title').textContent = 'Add Member';
+  document.getElementById('edit-id').value = '';
+  document.getElementById('f-name').value = '';
+  document.getElementById('f-email').value = '';
+  document.getElementById('f-phone').value = '';
+  document.getElementById('f-tier').value = 'select';
+  document.getElementById('f-status').value = 'active';
+  document.getElementById('f-locker').value = '';
+  document.getElementById('f-join').value = new Date().toISOString().split('T')[0];
+  document.getElementById('f-renewal').value = '';
+  document.getElementById('member-modal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const m = allMembers.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('modal-title').textContent = 'Edit Member';
+  document.getElementById('edit-id').value = m.id;
+  document.getElementById('f-name').value = m.name || '';
+  document.getElementById('f-email').value = m.email || '';
+  document.getElementById('f-phone').value = m.phone || '';
+  document.getElementById('f-tier').value = m.tier || 'select';
+  document.getElementById('f-status').value = m.status || 'active';
+  document.getElementById('f-locker').value = m.locker_number || '';
+  document.getElementById('f-join').value = m.join_date || '';
+  document.getElementById('f-renewal').value = m.renewal_date || '';
+  document.getElementById('member-modal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('member-modal').classList.remove('open');
+}
+
+async function saveMember() {
+  const id = document.getElementById('edit-id').value;
+  const payload = {
+    name: document.getElementById('f-name').value.trim(),
+    email: document.getElementById('f-email').value.trim(),
+    phone: document.getElementById('f-phone').value.trim(),
+    tier: document.getElementById('f-tier').value,
+    status: document.getElementById('f-status').value,
+    locker_number: document.getElementById('f-locker').value.trim() || null,
+    join_date: document.getElementById('f-join').value || null,
+    renewal_date: document.getElementById('f-renewal').value || null,
+  };
+
+  if (!payload.name || !payload.email) {
+    showToast('Name and email are required.');
+    return;
+  }
+
+  let error;
+  if (id) {
+    ({ error } = await db.from('members').update(payload).eq('id', id));
+  } else {
+    ({ error } = await db.from('members').insert(payload));
+  }
+
+  if (error) {
+    showToast('Error saving: ' + error.message);
+    return;
+  }
+
+  closeModal();
+  showToast(id ? 'Member updated.' : 'Member added.');
+  await loadMembers();
+}
+
+async function deleteMember(id, name) {
+  if (!confirm(`Remove ${name} from the member database? This cannot be undone.`)) return;
+  const { error } = await db.from('members').delete().eq('id', id);
+  if (error) { showToast('Error: ' + error.message); return; }
+  showToast('Member removed.');
+  await loadMembers();
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(d) {
+  if (!d) return '<span style="opacity:.3">—</span>';
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// Close modal on background click
+document.getElementById('member-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script>
+</body>
+</html>
