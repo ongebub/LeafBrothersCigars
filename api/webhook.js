@@ -21,7 +21,6 @@ const PLAN_TO_TIER = {
   'FWREST2ORNNAO3CSPV5XDDMA': 'locker',
 };
 
-// Square signs: HMAC-SHA256( webhook_secret, notification_url + raw_body )
 const WEBHOOK_URL = process.env.SQUARE_WEBHOOK_URL || 'https://www.leafbrotherscigars.com/api/webhook';
 
 function verifySignature(signature, body) {
@@ -33,6 +32,52 @@ function verifySignature(signature, body) {
     return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
   } catch {
     return false;
+  }
+}
+
+// Activate a member in Supabase — shared by both payment and subscription handlers
+async function activateMember(customerId, subscriptionId, tier) {
+  // Try to update existing pending row first
+  const { data, error } = await supabase
+    .from('members')
+    .update({
+      status: 'active',
+      square_subscription_id: subscriptionId || undefined,
+      tier: tier || undefined,
+    })
+    .eq('square_customer_id', customerId)
+    .select();
+
+  if (error) {
+    console.error('Supabase update error:', error);
+    return;
+  }
+
+  if (data && data.length > 0) {
+    console.log('Member activated:', data[0]?.email, 'subscription:', subscriptionId);
+    return;
+  }
+
+  // No pending row — create from Square customer data
+  console.log('No pending member row, creating from Square customer');
+  try {
+    const custResult = await client.customers.get({ customerId });
+    const customer = custResult.customer;
+
+    const { error: insertErr } = await supabase.from('members').insert({
+      name: [customer.givenName, customer.familyName].filter(Boolean).join(' '),
+      email: customer.emailAddress,
+      phone: customer.phoneNumber,
+      tier: tier || customer.referenceId || 'unknown',
+      status: 'active',
+      join_date: new Date().toISOString().split('T')[0],
+      square_customer_id: customerId,
+      square_subscription_id: subscriptionId || null,
+    });
+    if (insertErr) console.error('Supabase insert error:', insertErr);
+    else console.log('Member created from webhook:', customer.emailAddress);
+  } catch (custErr) {
+    console.error('Error fetching customer for insert:', custErr.message);
   }
 }
 
@@ -52,70 +97,94 @@ module.exports = async function handler(req, res) {
   }
 
   const type = event?.type;
-  console.log('Square webhook received:', type, JSON.stringify(event.data?.object || {}).slice(0, 500));
+  console.log('[webhook] event type:', type);
+  console.log('[webhook] full payload:', JSON.stringify(event, null, 2).slice(0, 2000));
 
   try {
-    // ── Subscription created (fired automatically by Square Subscription Checkout) ──
-    if (type === 'subscription.created') {
+    // ── Payment events (payment.completed or payment.updated with COMPLETED status) ──
+    // Square fires these when the subscription checkout payment succeeds.
+    // The subscription may not exist yet at this point, so we activate the
+    // member from the payment and let the subscription event update the ID later.
+    if (type === 'payment.completed' || type === 'payment.updated') {
+      const payment = event.data?.object?.payment;
+      console.log('[webhook] payment object keys:', payment ? Object.keys(payment) : 'MISSING');
+      console.log('[webhook] payment.status:', payment?.status);
+      console.log('[webhook] payment.customer_id:', payment?.customer_id);
+      console.log('[webhook] payment.order_id:', payment?.order_id);
+
+      if (!payment) {
+        console.log('[webhook] EXIT: no payment object');
+        return res.status(200).json({ received: true });
+      }
+
+      // Only act on completed payments
+      const status = (payment.status || '').toUpperCase();
+      if (status !== 'COMPLETED') {
+        console.log('[webhook] EXIT: payment status is', status, '— not COMPLETED, skipping');
+        return res.status(200).json({ received: true });
+      }
+
+      const customerId = payment.customer_id;
+      if (!customerId) {
+        console.log('[webhook] EXIT: no customer_id on payment');
+        return res.status(200).json({ received: true });
+      }
+
+      // Look up customer to get tier from referenceId
+      console.log('[webhook] Looking up customer:', customerId);
+      const custResult = await client.customers.get({ customerId });
+      const tier = custResult.customer?.referenceId;
+      console.log('[webhook] Customer referenceId (tier):', tier);
+
+      // Check if this customer already has a subscription (may have been created by Square)
+      let subscriptionId = null;
+      try {
+        const subSearch = await client.subscriptions.search({
+          query: {
+            filter: {
+              customerIds: [customerId],
+              locationIds: [process.env.SQUARE_LOCATION_ID],
+            },
+          },
+        });
+        const activeSub = subSearch.subscriptions?.find(
+          s => s.status === 'ACTIVE' || s.status === 'PENDING'
+        );
+        if (activeSub) {
+          subscriptionId = activeSub.id;
+          console.log('[webhook] Found existing subscription:', subscriptionId);
+        }
+      } catch (subErr) {
+        console.log('[webhook] Subscription search error (non-fatal):', subErr.message);
+      }
+
+      console.log('[webhook] Activating member:', { customerId, subscriptionId, tier });
+      await activateMember(customerId, subscriptionId, tier);
+
+    // ── Subscription created (Square fires this after subscription checkout) ──
+    } else if (type === 'subscription.created') {
       const sub = event.data?.object?.subscription;
+      console.log('[webhook] subscription object:', sub ? { id: sub.id, customer_id: sub.customer_id, plan_variation_id: sub.plan_variation_id, status: sub.status } : 'MISSING');
+
       if (!sub) {
-        console.error('No subscription object in subscription.created payload');
+        console.log('[webhook] EXIT: no subscription object');
         return res.status(200).json({ received: true });
       }
 
       const subscriptionId = sub.id;
       const customerId = sub.customer_id;
-      const planVariationId = sub.plan_variation_id;
-      const tier = PLAN_TO_TIER[planVariationId] || null;
+      const tier = PLAN_TO_TIER[sub.plan_variation_id] || null;
 
-      console.log('subscription.created:', { subscriptionId, customerId, planVariationId, tier });
+      console.log('[webhook] Activating member from subscription.created:', { subscriptionId, customerId, tier });
+      await activateMember(customerId, subscriptionId, tier);
 
-      // Try to update existing pending member row (created during checkout)
-      const { data, error } = await supabase
-        .from('members')
-        .update({
-          status: 'active',
-          square_subscription_id: subscriptionId,
-          tier: tier || undefined,
-        })
-        .eq('square_customer_id', customerId)
-        .select();
-
-      if (error) {
-        console.error('Supabase update error:', error);
-      } else if (!data || data.length === 0) {
-        // No pending row found — create one from the Square customer record
-        console.log('No pending member row found, creating from Square customer data');
-        try {
-          const custResult = await client.customers.get({ customerId });
-          const customer = custResult.customer;
-
-          const { error: insertErr } = await supabase.from('members').insert({
-            name: [customer.givenName, customer.familyName].filter(Boolean).join(' '),
-            email: customer.emailAddress,
-            phone: customer.phoneNumber,
-            tier: tier || customer.referenceId || 'unknown',
-            status: 'active',
-            join_date: new Date().toISOString().split('T')[0],
-            square_customer_id: customerId,
-            square_subscription_id: subscriptionId,
-          });
-          if (insertErr) console.error('Supabase insert error:', insertErr);
-          else console.log('Member created from webhook:', customer.emailAddress);
-        } catch (custErr) {
-          console.error('Error fetching customer for fallback insert:', custErr.message);
-        }
-      } else {
-        console.log('Member activated:', data[0]?.email, 'subscription:', subscriptionId);
-      }
-
-    // ── Subscription updated (status change, renewal, etc.) ──
+    // ── Subscription updated ──
     } else if (type === 'subscription.updated') {
       const sub = event.data?.object?.subscription;
       if (!sub) return res.status(200).json({ received: true });
 
       const status = sub.status?.toLowerCase() || 'unknown';
-      console.log('subscription.updated:', sub.id, 'status:', status);
+      console.log('[webhook] subscription.updated:', sub.id, 'status:', status);
 
       const { error } = await supabase
         .from('members')
@@ -125,27 +194,31 @@ module.exports = async function handler(req, res) {
         })
         .eq('square_subscription_id', sub.id);
 
-      if (error) console.error('Supabase update error (subscription.updated):', error);
+      if (error) console.error('[webhook] Supabase update error:', error);
 
     // ── Subscription deleted ──
     } else if (type === 'subscription.deleted') {
       const sub = event.data?.object?.subscription;
       if (!sub) return res.status(200).json({ received: true });
 
-      console.log('subscription.deleted:', sub.id);
+      console.log('[webhook] subscription.deleted:', sub.id);
 
       const { error } = await supabase
         .from('members')
         .update({ status: 'cancelled' })
         .eq('square_subscription_id', sub.id);
 
-      if (error) console.error('Supabase update error (subscription.deleted):', error);
+      if (error) console.error('[webhook] Supabase update error:', error);
+
+    } else {
+      console.log('[webhook] UNHANDLED event type:', type, '— no action taken');
     }
 
     res.status(200).json({ received: true });
 
   } catch (err) {
-    console.error('Webhook handler error:', err.message || err);
+    console.error('[webhook] CAUGHT ERROR:', err.message || err);
+    console.error('[webhook] Error stack:', err.stack);
     res.status(200).json({ received: true, error: err.message });
   }
 }
