@@ -93,20 +93,17 @@ module.exports = async function handler(req, res) {
     // 3. Insert member into Supabase as pending — the subscription.created
     //    webhook will update status to active with the subscription ID
     const today = new Date().toISOString().split('T')[0];
-    const { error: upsertErr } = await supabase.from('members').upsert(
-      {
-        name,
-        email,
-        phone,
-        tier,
-        home_location: home_location || null,
-        status: 'pending',
-        join_date: today,
-        square_customer_id: customerId,
-      },
-      { onConflict: 'email' }
-    );
-    if (upsertErr) console.error('Supabase upsert error:', upsertErr);
+    const { error: insertErr } = await supabase.from('members').insert({
+      name,
+      email,
+      phone,
+      tier,
+      home_location: home_location || null,
+      status: 'pending',
+      join_date: today,
+      square_customer_id: customerId,
+    });
+    if (insertErr) console.error('Supabase insert error:', insertErr);
 
     res.status(200).json({ url: checkoutResult.paymentLink.url });
 
