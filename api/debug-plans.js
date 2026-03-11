@@ -81,9 +81,12 @@ module.exports = async function handler(req, res) {
               phases: [
                 {
                   cadence: 'MONTHLY',
-                  recurringPriceMoney: {
-                    amount: BigInt(plan.amount),
-                    currency: 'USD',
+                  pricing: {
+                    type: 'STATIC',
+                    priceMoney: {
+                      amount: BigInt(plan.amount),
+                      currency: 'USD',
+                    },
                   },
                 },
               ],
