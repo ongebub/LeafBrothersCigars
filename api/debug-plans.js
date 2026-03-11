@@ -69,34 +69,52 @@ module.exports = async function handler(req, res) {
           continue;
         }
 
-        // Create the variation
-        const upsertResult = await client.catalog.object.upsert({
-          idempotencyKey: `create-var-${tier}-${Date.now()}`,
-          object: {
-            type: 'SUBSCRIPTION_PLAN_VARIATION',
-            id: `#${tier}-monthly`,
-            subscriptionPlanVariationData: {
-              name: plan.name,
-              subscriptionPlanId: plan.planId,
-              phases: [
-                {
-                  cadence: 'MONTHLY',
-                  pricing: {
-                    type: 'STATIC',
-                    priceMoney: {
-                      amount: BigInt(plan.amount),
-                      currency: 'USD',
+        // Create the variation via raw HTTP to bypass SDK field name conversion
+        const rawRes = await fetch('https://connect.squareup.com/v2/catalog/object', {
+          method: 'POST',
+          headers: {
+            'Square-Version': '2026-01-22',
+            'Authorization': `Bearer ${process.env.SQUARE_ACCESS_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            idempotency_key: `create-var-${tier}-${Date.now()}`,
+            object: {
+              type: 'SUBSCRIPTION_PLAN_VARIATION',
+              id: `#${tier}-monthly`,
+              subscription_plan_variation_data: {
+                name: plan.name,
+                subscription_plan_id: plan.planId,
+                phases: [
+                  {
+                    cadence: 'MONTHLY',
+                    pricing: {
+                      type: 'STATIC',
+                      price_money: {
+                        amount: plan.amount,
+                        currency: 'USD',
+                      },
                     },
                   },
-                },
-              ],
+                ],
+              },
             },
-          },
+          }),
         });
+
+        const rawData = await rawRes.json();
+        if (!rawRes.ok) {
+          results[tier] = {
+            status: 'error',
+            httpStatus: rawRes.status,
+            errors: rawData.errors || rawData,
+          };
+          continue;
+        }
 
         results[tier] = {
           status: 'created',
-          variationId: upsertResult.catalogObject?.id,
+          variationId: rawData.catalog_object?.id,
           name: plan.name,
         };
       } catch (err) {
