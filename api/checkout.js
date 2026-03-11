@@ -12,11 +12,11 @@ const supabase = createClient(
 );
 
 const PLANS = {
-  'select':          { name: 'Select Member',          amount: 1500, planId: 'QAKPMT2OPQMEJ23DPA452PVJ' },
-  'lounge':          { name: 'Lounge Member',           amount: 3900, planId: 'OHZPZSZ7TLPVUR6C5JHYSF4J' },
-  'lounge-premium':  { name: 'Lounge Member Premium',   amount: 4900, planId: 'F5FZK73GAQTRKS5DVG2LRQWY' },
-  'half-locker':     { name: 'Half Locker Member',      amount: 5900, planId: 'BP4MUBLECF4GV6B7GDCHU6DZ' },
-  'locker':          { name: 'Locker Member',           amount: 6900, planId: 'FWREST2ORNNAO3CSPV5XDDMA' },
+  'select':          { name: 'Select Member',          amount: 1500, planId: 'WXS3UVFGTJ7Z5TOYUSMGX2GE' },
+  'lounge':          { name: 'Lounge Member',           amount: 3900, planId: 'TS5DUW65745CEVANPELUKWBY' },
+  'lounge-premium':  { name: 'Lounge Member Premium',   amount: 4900, planId: '6YKSAN7WUNPA37ZQZEO7T5NJ' },
+  'half-locker':     { name: 'Half Locker Member',      amount: 5900, planId: 'O3R7YN4EPFTZXIXJKAHKJUEC' },
+  'locker':          { name: 'Locker Member',           amount: 6900, planId: 'H2ELZFYJ35ZOYRQ5BGD36LVL' },
 };
 
 // Format phone to E.164 (+15155550100). Returns null if invalid.

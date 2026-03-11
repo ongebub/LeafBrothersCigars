@@ -14,11 +14,11 @@ const supabase = createClient(
 
 // Reverse lookup: plan variation ID → tier slug
 const PLAN_TO_TIER = {
-  'QAKPMT2OPQMEJ23DPA452PVJ': 'select',
-  'OHZPZSZ7TLPVUR6C5JHYSF4J': 'lounge',
-  'F5FZK73GAQTRKS5DVG2LRQWY': 'lounge-premium',
-  'BP4MUBLECF4GV6B7GDCHU6DZ': 'half-locker',
-  'FWREST2ORNNAO3CSPV5XDDMA': 'locker',
+  'WXS3UVFGTJ7Z5TOYUSMGX2GE': 'select',
+  'TS5DUW65745CEVANPELUKWBY': 'lounge',
+  '6YKSAN7WUNPA37ZQZEO7T5NJ': 'lounge-premium',
+  'O3R7YN4EPFTZXIXJKAHKJUEC': 'half-locker',
+  'H2ELZFYJ35ZOYRQ5BGD36LVL': 'locker',
 };
 
 const WEBHOOK_URL = process.env.SQUARE_WEBHOOK_URL || 'https://www.leafbrotherscigars.com/api/webhook';
