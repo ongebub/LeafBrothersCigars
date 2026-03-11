@@ -61,6 +61,12 @@ module.exports = async function handler(req, res) {
       checkoutOptions: {
         redirectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/member-welcome`,
         askForShippingAddress: false,
+        acceptedPaymentMethods: {
+          applePay: true,
+          googlePay: true,
+          cashAppPay: true,
+          afterpayClearpay: false,
+        },
       },
     });
 
