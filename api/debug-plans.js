@@ -5,46 +5,110 @@ const client = new SquareClient({
   environment: SquareEnvironment.Production,
 });
 
-const PLAN_IDS = {
-  'select':          'QAKPMT2OPQMEJ23DPA452PVJ',
-  'lounge':          'OHZPZSZ7TLPVUR6C5JHYSF4J',
-  'lounge-premium':  'F5FZK73GAQTRKS5DVG2LRQWY',
-  'half-locker':     'BP4MUBLECF4GV6B7GDCHU6DZ',
-  'locker':          'FWREST2ORNNAO3CSPV5XDDMA',
+// Plan ID → tier config
+const PLANS = {
+  'select':          { planId: 'QAKPMT2OPQMEJ23DPA452PVJ', name: 'Select Member — Monthly',          amount: 1500 },
+  'lounge':          { planId: 'OHZPZSZ7TLPVUR6C5JHYSF4J', name: 'Lounge Member — Monthly',           amount: 3900 },
+  'lounge-premium':  { planId: 'F5FZK73GAQTRKS5DVG2LRQWY', name: 'Lounge Member Premium — Monthly',   amount: 4900 },
+  'half-locker':     { planId: 'BP4MUBLECF4GV6B7GDCHU6DZ', name: 'Half Locker Member — Monthly',      amount: 5900 },
+  'locker':          { planId: 'FWREST2ORNNAO3CSPV5XDDMA', name: 'Locker Member — Monthly',           amount: 6900 },
 };
 
 module.exports = async function handler(req, res) {
-  const results = {};
+  const action = req.query?.action || req.url?.split('action=')[1] || 'list';
 
-  for (const [tier, planId] of Object.entries(PLAN_IDS)) {
-    try {
-      const result = await client.catalog.object.get({
-        objectId: planId,
-        includeRelatedObjects: true,
-      });
-
-      const obj = result.object;
-      const entry = {
-        objectType: obj?.type,
-        objectId: obj?.id,
-        subscriptionPlanData: obj?.subscriptionPlanData || null,
-        relatedObjects: (result.relatedObjects || []).map(rel => ({
-          type: rel.type,
-          id: rel.id,
-          subscriptionPlanVariationData: rel.subscriptionPlanVariationData || null,
-        })),
-      };
-
-      results[tier] = entry;
-    } catch (err) {
-      results[tier] = { error: err.message, body: err.body || null };
+  // GET /api/debug-plans?action=list — show plans and existing variations
+  if (action === 'list') {
+    const results = {};
+    for (const [tier, plan] of Object.entries(PLANS)) {
+      try {
+        const result = await client.catalog.object.get({
+          objectId: plan.planId,
+          includeRelatedObjects: true,
+        });
+        results[tier] = {
+          planId: plan.planId,
+          type: result.object?.type,
+          name: result.object?.subscriptionPlanData?.name,
+          variations: (result.relatedObjects || [])
+            .filter(r => r.type === 'SUBSCRIPTION_PLAN_VARIATION')
+            .map(r => ({
+              variationId: r.id,
+              name: r.subscriptionPlanVariationData?.name,
+              phases: r.subscriptionPlanVariationData?.phases,
+            })),
+        };
+      } catch (err) {
+        results[tier] = { error: err.message };
+      }
     }
+    const body = JSON.stringify(results, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2);
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(200).end(body);
   }
 
-  // BigInt-safe JSON serialization
-  const body = JSON.stringify(results, (_, v) =>
-    typeof v === 'bigint' ? v.toString() : v, 2);
+  // GET /api/debug-plans?action=create — create variations for plans that don't have one
+  if (action === 'create') {
+    const results = {};
+    for (const [tier, plan] of Object.entries(PLANS)) {
+      try {
+        // Check if variation already exists
+        const existing = await client.catalog.object.get({
+          objectId: plan.planId,
+          includeRelatedObjects: true,
+        });
+        const existingVariation = (existing.relatedObjects || [])
+          .find(r => r.type === 'SUBSCRIPTION_PLAN_VARIATION');
 
-  res.setHeader('Content-Type', 'application/json');
-  res.status(200).end(body);
+        if (existingVariation) {
+          results[tier] = {
+            status: 'already_exists',
+            variationId: existingVariation.id,
+            name: existingVariation.subscriptionPlanVariationData?.name,
+          };
+          continue;
+        }
+
+        // Create the variation
+        const upsertResult = await client.catalog.object.upsert({
+          idempotencyKey: `create-var-${tier}-${Date.now()}`,
+          object: {
+            type: 'SUBSCRIPTION_PLAN_VARIATION',
+            id: `#${tier}-monthly`,
+            subscriptionPlanVariationData: {
+              name: plan.name,
+              subscriptionPlanId: plan.planId,
+              phases: [
+                {
+                  cadence: 'MONTHLY',
+                  recurringPriceMoney: {
+                    amount: BigInt(plan.amount),
+                    currency: 'USD',
+                  },
+                },
+              ],
+            },
+          },
+        });
+
+        results[tier] = {
+          status: 'created',
+          variationId: upsertResult.catalogObject?.id,
+          name: plan.name,
+        };
+      } catch (err) {
+        results[tier] = {
+          status: 'error',
+          message: err.message,
+          errors: err.body?.errors || null,
+        };
+      }
+    }
+
+    const body = JSON.stringify(results, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2);
+    res.setHeader('Content-Type', 'application/json');
+    return res.status(200).end(body);
+  }
+
+  res.status(400).json({ error: 'Use ?action=list or ?action=create' });
 }
