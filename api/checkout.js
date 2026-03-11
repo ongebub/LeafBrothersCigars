@@ -19,6 +19,15 @@ const PLANS = {
   'locker':          { name: 'Locker Member',           amount: 6900, planId: 'FWREST2ORNNAO3CSPV5XDDMA' },
 };
 
+// Format phone to E.164 (+15155550100). Returns null if invalid.
+function formatPhone(raw) {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 10) return '+1' + digits;
+  if (digits.length === 11 && digits[0] === '1') return '+' + digits;
+  return null;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -26,15 +35,19 @@ module.exports = async function handler(req, res) {
   const plan = PLANS[tier];
   if (!plan) return res.status(400).json({ error: 'Invalid tier' });
 
+  const e164Phone = formatPhone(phone);
+
   try {
     // 1. Create or find customer
-    const customerResult = await client.customers.create({
+    const customerRequest = {
       givenName: name.split(' ')[0],
       familyName: name.split(' ').slice(1).join(' '),
       emailAddress: email,
-      phoneNumber: phone,
       referenceId: tier,
-    });
+    };
+    if (e164Phone) customerRequest.phoneNumber = e164Phone;
+
+    const customerResult = await client.customers.create(customerRequest);
 
     const customerId = customerResult.customer.id;
     console.log('Customer created:', customerId, 'tier:', tier);
@@ -65,7 +78,7 @@ module.exports = async function handler(req, res) {
       },
       prePopulatedData: {
         buyerEmail: email,
-        buyerPhoneNumber: phone,
+        ...(e164Phone && { buyerPhoneNumber: e164Phone }),
       },
     };
 
