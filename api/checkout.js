@@ -12,11 +12,11 @@ const supabase = createClient(
 );
 
 const PLANS = {
-  'select':          { name: 'Select Member',          planId: 'QAKPMT2OPQMEJ23DPA452PVJ' },
-  'lounge':          { name: 'Lounge Member',           planId: 'OHZPZSZ7TLPVUR6C5JHYSF4J' },
-  'lounge-premium':  { name: 'Lounge Member Premium',   planId: 'F5FZK73GAQTRKS5DVG2LRQWY' },
-  'half-locker':     { name: 'Half Locker Member',      planId: 'BP4MUBLECF4GV6B7GDCHU6DZ' },
-  'locker':          { name: 'Locker Member',           planId: 'FWREST2ORNNAO3CSPV5XDDMA' },
+  'select':          { name: 'Select Member',          amount: 1500, planId: 'QAKPMT2OPQMEJ23DPA452PVJ' },
+  'lounge':          { name: 'Lounge Member',           amount: 3900, planId: 'OHZPZSZ7TLPVUR6C5JHYSF4J' },
+  'lounge-premium':  { name: 'Lounge Member Premium',   amount: 4900, planId: 'F5FZK73GAQTRKS5DVG2LRQWY' },
+  'half-locker':     { name: 'Half Locker Member',      amount: 5900, planId: 'BP4MUBLECF4GV6B7GDCHU6DZ' },
+  'locker':          { name: 'Locker Member',           amount: 6900, planId: 'FWREST2ORNNAO3CSPV5XDDMA' },
 };
 
 module.exports = async function handler(req, res) {
@@ -45,6 +45,14 @@ module.exports = async function handler(req, res) {
     //    recurring billing — no separate order or webhook flow needed.
     const linkRequest = {
       idempotencyKey: `${customerId}-${tier}-${Date.now()}`,
+      quickPay: {
+        name: `${plan.name} — First Month`,
+        priceMoney: {
+          amount: BigInt(plan.amount),
+          currency: 'USD',
+        },
+        locationId: process.env.SQUARE_LOCATION_ID,
+      },
       checkoutOptions: {
         subscriptionPlanId: plan.planId,
         redirectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/member-welcome`,
