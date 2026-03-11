@@ -1,9 +1,9 @@
-const { Client, Environment } = require('square');
+const { SquareClient, SquareEnvironment } = require('square');
 const { createClient } = require('@supabase/supabase-js');
 
-const client = new Client({
-  accessToken: process.env.SQUARE_ACCESS_TOKEN,
-  environment: Environment.Production,
+const client = new SquareClient({
+  token: process.env.SQUARE_ACCESS_TOKEN,
+  environment: SquareEnvironment.Production,
 });
 
 const supabase = createClient(
@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
 
   try {
     // 1. Create or find customer
-    const { result: customerResult } = await client.customersApi.createCustomer({
+    const customerResult = await client.customers.create({
       givenName: name.split(' ')[0],
       familyName: name.split(' ').slice(1).join(' '),
       emailAddress: email,
@@ -42,23 +42,21 @@ module.exports = async function handler(req, res) {
     //    Square subscriptions require a card on file — the subscription itself
     //    is created by the webhook after the customer completes checkout and
     //    their card is stored.
-    const { result: checkoutResult } = await client.checkoutApi.createPaymentLink({
+    const checkoutResult = await client.checkout.paymentLinks.create({
       idempotencyKey: `${customerId}-${tier}-${Date.now()}`,
       order: {
-        order: {
-          locationId: process.env.SQUARE_LOCATION_ID,
-          customerId,
-          lineItems: [
-            {
-              name: `${plan.name} — First Month`,
-              quantity: '1',
-              basePriceMoney: {
-                amount: BigInt(plan.amount),
-                currency: 'USD',
-              },
+        locationId: process.env.SQUARE_LOCATION_ID,
+        customerId,
+        lineItems: [
+          {
+            name: `${plan.name} — First Month`,
+            quantity: '1',
+            basePriceMoney: {
+              amount: BigInt(plan.amount),
+              currency: 'USD',
             },
-          ],
-        },
+          },
+        ],
       },
       checkoutOptions: {
         redirectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/member-welcome`,

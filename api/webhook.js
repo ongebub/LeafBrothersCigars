@@ -1,10 +1,10 @@
-const { Client, Environment } = require('square');
+const { SquareClient, SquareEnvironment } = require('square');
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
 
-const client = new Client({
-  accessToken: process.env.SQUARE_ACCESS_TOKEN,
-  environment: Environment.Production,
+const client = new SquareClient({
+  token: process.env.SQUARE_ACCESS_TOKEN,
+  environment: SquareEnvironment.Production,
 });
 
 const supabase = createClient(
@@ -54,10 +54,9 @@ module.exports = async function handler(req, res) {
       if (!payment?.customerId) return res.status(200).json({ received: true });
 
       const customerId = payment.customerId;
-      const cardNonce = payment.sourceType === 'CARD' ? payment.cardDetails?.card?.id : null;
 
       // Look up the customer to get their tier from referenceId
-      const { result: custResult } = await client.customersApi.retrieveCustomer(customerId);
+      const custResult = await client.customers.get({ customerId });
       const tier = custResult.customer.referenceId;
       const plan = PLANS[tier];
 
@@ -67,12 +66,12 @@ module.exports = async function handler(req, res) {
       }
 
       // Store the card on file for the customer
-      let cardId = cardNonce;
+      let cardId = null;
       if (payment.cardDetails?.card?.id) {
         cardId = payment.cardDetails.card.id;
       } else if (payment.sourceType === 'CARD' && payment.cardDetails) {
         // Create a card on file from the payment source
-        const { result: cardResult } = await client.cardsApi.createCard({
+        const cardResult = await client.cards.create({
           idempotencyKey: `card-${customerId}-${Date.now()}`,
           sourceId: payment.id,
           card: { customerId },
@@ -86,7 +85,7 @@ module.exports = async function handler(req, res) {
       }
 
       // Create the subscription with the stored card
-      const { result: subResult } = await client.subscriptionsApi.createSubscription({
+      const subResult = await client.subscriptions.create({
         idempotencyKey: `sub-${customerId}-${tier}-${Date.now()}`,
         locationId: process.env.SQUARE_LOCATION_ID,
         planVariationId: plan.planId,
