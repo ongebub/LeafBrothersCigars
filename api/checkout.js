@@ -1,5 +1,5 @@
-import { Client, Environment } from 'square';
-import { createClient } from '@supabase/supabase-js';
+const { Client, Environment } = require('square');
+const { createClient } = require('@supabase/supabase-js');
 
 const client = new Client({
   accessToken: process.env.SQUARE_ACCESS_TOKEN,
@@ -19,7 +19,7 @@ const PLANS = {
   'locker':          { name: 'Locker Member',           amount: 6900, planId: 'FWREST2ORNNAO3CSPV5XDDMA' },
 };
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { tier, name, email, phone, home_location } = req.body;
