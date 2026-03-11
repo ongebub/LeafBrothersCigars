@@ -12,31 +12,33 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const PLANS = {
-  'select':          { planId: 'QAKPMT2OPQMEJ23DPA452PVJ' },
-  'lounge':          { planId: 'OHZPZSZ7TLPVUR6C5JHYSF4J' },
-  'lounge-premium':  { planId: 'F5FZK73GAQTRKS5DVG2LRQWY' },
-  'half-locker':     { planId: 'BP4MUBLECF4GV6B7GDCHU6DZ' },
-  'locker':          { planId: 'FWREST2ORNNAO3CSPV5XDDMA' },
+// Reverse lookup: plan variation ID → tier slug
+const PLAN_TO_TIER = {
+  'QAKPMT2OPQMEJ23DPA452PVJ': 'select',
+  'OHZPZSZ7TLPVUR6C5JHYSF4J': 'lounge',
+  'F5FZK73GAQTRKS5DVG2LRQWY': 'lounge-premium',
+  'BP4MUBLECF4GV6B7GDCHU6DZ': 'half-locker',
+  'FWREST2ORNNAO3CSPV5XDDMA': 'locker',
 };
 
 // Square signs: HMAC-SHA256( webhook_secret, notification_url + raw_body )
-// The notification URL must match exactly what's configured in Square Dashboard.
 const WEBHOOK_URL = process.env.SQUARE_WEBHOOK_URL || 'https://www.leafbrotherscigars.com/api/webhook';
 
 function verifySignature(signature, body) {
   if (!signature || !process.env.SQUARE_WEBHOOK_SECRET) return false;
-  const hmac = crypto.createHmac('sha256', process.env.SQUARE_WEBHOOK_SECRET);
-  hmac.update(WEBHOOK_URL + body);
-  const expected = hmac.digest('base64');
-  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  try {
+    const hmac = crypto.createHmac('sha256', process.env.SQUARE_WEBHOOK_SECRET);
+    hmac.update(WEBHOOK_URL + body);
+    const expected = hmac.digest('base64');
+    return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
+  } catch {
+    return false;
+  }
 }
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  // Use the raw body string for signature verification — re-stringifying
-  // the parsed body may not match what Square signed.
   const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
   const event = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
 
@@ -50,92 +52,31 @@ module.exports = async function handler(req, res) {
   }
 
   const type = event?.type;
-  console.log('Square webhook received:', type);
+  console.log('Square webhook received:', type, JSON.stringify(event.data?.object || {}).slice(0, 500));
 
   try {
-    // ── Payment completed — look up tier, store card, create subscription ──
-    if (type === 'payment.completed') {
-      // Square webhook payloads use snake_case field names
-      const payment = event.data?.object?.payment;
-      if (!payment) {
-        console.error('No payment object in webhook payload');
+    // ── Subscription created (fired automatically by Square Subscription Checkout) ──
+    if (type === 'subscription.created') {
+      const sub = event.data?.object?.subscription;
+      if (!sub) {
+        console.error('No subscription object in subscription.created payload');
         return res.status(200).json({ received: true });
       }
 
-      const customerId = payment.customer_id;
-      if (!customerId) {
-        console.error('No customer_id on payment:', payment.id);
-        return res.status(200).json({ received: true });
-      }
+      const subscriptionId = sub.id;
+      const customerId = sub.customer_id;
+      const planVariationId = sub.plan_variation_id;
+      const tier = PLAN_TO_TIER[planVariationId] || null;
 
-      console.log('Processing payment.completed for customer:', customerId);
+      console.log('subscription.created:', { subscriptionId, customerId, planVariationId, tier });
 
-      // Look up the customer to get their tier from referenceId
-      const custResult = await client.customers.get({ customerId });
-      const tier = custResult.customer?.referenceId;
-      const plan = tier ? PLANS[tier] : null;
-
-      if (!plan) {
-        console.error('No matching plan for tier:', tier, '— customer:', customerId);
-        return res.status(200).json({ received: true });
-      }
-
-      console.log('Found tier:', tier, 'for customer:', customerId);
-
-      // Get a card on file for the subscription.
-      // After a checkout payment, Square stores the card on the customer.
-      // List the customer's cards and use the most recent one.
-      let cardId = null;
-      try {
-        const cardsResult = await client.cards.list({ customerId, sortOrder: 'DESC' });
-        for await (const card of cardsResult) {
-          if (card.enabled !== false) {
-            cardId = card.id;
-            console.log('Found card on file:', cardId);
-            break;
-          }
-        }
-      } catch (cardListErr) {
-        console.error('Error listing customer cards:', cardListErr.message);
-      }
-
-      // Fallback: try to get card ID from the payment's card_details
-      if (!cardId && payment.card_details?.card?.id) {
-        cardId = payment.card_details.card.id;
-        console.log('Using card from payment details:', cardId);
-      }
-
-      // Create the subscription (cardId is optional — without it Square
-      // sends the customer an invoice link to pay)
-      const subRequest = {
-        idempotencyKey: `sub-${customerId}-${tier}-${Date.now()}`,
-        locationId: process.env.SQUARE_LOCATION_ID,
-        planVariationId: plan.planId,
-        customerId,
-        startDate: new Date().toISOString().split('T')[0],
-      };
-      if (cardId) {
-        subRequest.cardId = cardId;
-      }
-
-      console.log('Creating subscription with:', JSON.stringify(subRequest));
-
-      const subResult = await client.subscriptions.create(subRequest);
-      const subscriptionId = subResult.subscription?.id;
-
-      if (!subscriptionId) {
-        console.error('Subscription created but no ID returned:', JSON.stringify(subResult));
-        return res.status(200).json({ received: true });
-      }
-
-      console.log('Subscription created:', subscriptionId);
-
-      // Update the member record in Supabase
+      // Try to update existing pending member row (created during checkout)
       const { data, error } = await supabase
         .from('members')
         .update({
           status: 'active',
           square_subscription_id: subscriptionId,
+          tier: tier || undefined,
         })
         .eq('square_customer_id', customerId)
         .select();
@@ -143,32 +84,39 @@ module.exports = async function handler(req, res) {
       if (error) {
         console.error('Supabase update error:', error);
       } else if (!data || data.length === 0) {
-        // No existing row matched — insert a fresh member record.
-        // This handles the case where the checkout upsert failed or was skipped.
-        console.log('No existing member row found, inserting new record');
-        const customer = custResult.customer;
-        const { error: insertErr } = await supabase.from('members').insert({
-          name: [customer.givenName, customer.familyName].filter(Boolean).join(' '),
-          email: customer.emailAddress,
-          phone: customer.phoneNumber,
-          tier,
-          status: 'active',
-          join_date: new Date().toISOString().split('T')[0],
-          square_customer_id: customerId,
-          square_subscription_id: subscriptionId,
-        });
-        if (insertErr) console.error('Supabase insert error:', insertErr);
-        else console.log('Member inserted via webhook fallback');
+        // No pending row found — create one from the Square customer record
+        console.log('No pending member row found, creating from Square customer data');
+        try {
+          const custResult = await client.customers.get({ customerId });
+          const customer = custResult.customer;
+
+          const { error: insertErr } = await supabase.from('members').insert({
+            name: [customer.givenName, customer.familyName].filter(Boolean).join(' '),
+            email: customer.emailAddress,
+            phone: customer.phoneNumber,
+            tier: tier || customer.referenceId || 'unknown',
+            status: 'active',
+            join_date: new Date().toISOString().split('T')[0],
+            square_customer_id: customerId,
+            square_subscription_id: subscriptionId,
+          });
+          if (insertErr) console.error('Supabase insert error:', insertErr);
+          else console.log('Member created from webhook:', customer.emailAddress);
+        } catch (custErr) {
+          console.error('Error fetching customer for fallback insert:', custErr.message);
+        }
       } else {
-        console.log('Member updated to active:', data[0]?.email);
+        console.log('Member activated:', data[0]?.email, 'subscription:', subscriptionId);
       }
 
-    // ── Subscription status changes (these payloads also use snake_case) ──
+    // ── Subscription updated (status change, renewal, etc.) ──
     } else if (type === 'subscription.updated') {
       const sub = event.data?.object?.subscription;
       if (!sub) return res.status(200).json({ received: true });
 
       const status = sub.status?.toLowerCase() || 'unknown';
+      console.log('subscription.updated:', sub.id, 'status:', status);
+
       const { error } = await supabase
         .from('members')
         .update({
@@ -179,9 +127,12 @@ module.exports = async function handler(req, res) {
 
       if (error) console.error('Supabase update error (subscription.updated):', error);
 
+    // ── Subscription deleted ──
     } else if (type === 'subscription.deleted') {
       const sub = event.data?.object?.subscription;
       if (!sub) return res.status(200).json({ received: true });
+
+      console.log('subscription.deleted:', sub.id);
 
       const { error } = await supabase
         .from('members')
@@ -195,8 +146,6 @@ module.exports = async function handler(req, res) {
 
   } catch (err) {
     console.error('Webhook handler error:', err.message || err);
-    // Return 200 to prevent Square from retrying on application errors —
-    // a 500 causes Square to retry up to 18 times over 3 days
     res.status(200).json({ received: true, error: err.message });
   }
 }

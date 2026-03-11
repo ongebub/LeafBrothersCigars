@@ -12,11 +12,11 @@ const supabase = createClient(
 );
 
 const PLANS = {
-  'select':          { name: 'Select Member',          amount: 1500, planId: 'QAKPMT2OPQMEJ23DPA452PVJ' },
-  'lounge':          { name: 'Lounge Member',           amount: 3900, planId: 'OHZPZSZ7TLPVUR6C5JHYSF4J' },
-  'lounge-premium':  { name: 'Lounge Member Premium',   amount: 4900, planId: 'F5FZK73GAQTRKS5DVG2LRQWY' },
-  'half-locker':     { name: 'Half Locker Member',      amount: 5900, planId: 'BP4MUBLECF4GV6B7GDCHU6DZ' },
-  'locker':          { name: 'Locker Member',           amount: 6900, planId: 'FWREST2ORNNAO3CSPV5XDDMA' },
+  'select':          { name: 'Select Member',          planId: 'QAKPMT2OPQMEJ23DPA452PVJ' },
+  'lounge':          { name: 'Lounge Member',           planId: 'OHZPZSZ7TLPVUR6C5JHYSF4J' },
+  'lounge-premium':  { name: 'Lounge Member Premium',   planId: 'F5FZK73GAQTRKS5DVG2LRQWY' },
+  'half-locker':     { name: 'Half Locker Member',      planId: 'BP4MUBLECF4GV6B7GDCHU6DZ' },
+  'locker':          { name: 'Locker Member',           planId: 'FWREST2ORNNAO3CSPV5XDDMA' },
 };
 
 module.exports = async function handler(req, res) {
@@ -33,34 +33,21 @@ module.exports = async function handler(req, res) {
       familyName: name.split(' ').slice(1).join(' '),
       emailAddress: email,
       phoneNumber: phone,
-      referenceId: tier, // Store tier so webhook can look it up
+      referenceId: tier,
     });
 
     const customerId = customerResult.customer.id;
+    console.log('Customer created:', customerId, 'tier:', tier);
 
-    // 2. Create a checkout link to collect card details and first payment.
-    //    Square subscriptions require a card on file — the subscription itself
-    //    is created by the webhook after the customer completes checkout and
-    //    their card is stored.
-    const checkoutResult = await client.checkout.paymentLinks.create({
+    // 2. Create a subscription checkout payment link.
+    //    Square's Subscription Plan Checkout handles everything:
+    //    collects card details, creates the subscription, and starts
+    //    recurring billing — no separate order or webhook flow needed.
+    const linkRequest = {
       idempotencyKey: `${customerId}-${tier}-${Date.now()}`,
-      order: {
-        locationId: process.env.SQUARE_LOCATION_ID,
-        customerId,
-        lineItems: [
-          {
-            name: `${plan.name} — First Month`,
-            quantity: '1',
-            basePriceMoney: {
-              amount: BigInt(plan.amount),
-              currency: 'USD',
-            },
-          },
-        ],
-      },
       checkoutOptions: {
+        subscriptionPlanId: plan.planId,
         redirectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/member-welcome`,
-        askForShippingAddress: false,
         acceptedPaymentMethods: {
           applePay: true,
           googlePay: true,
@@ -68,10 +55,22 @@ module.exports = async function handler(req, res) {
           afterpayClearpay: false,
         },
       },
-    });
+      prePopulatedData: {
+        buyerEmail: email,
+        buyerPhoneNumber: phone,
+      },
+    };
 
-    // 3. Insert member into Supabase as pending — the webhook will activate
-    //    the subscription and update the record once payment completes
+    console.log('Creating payment link:', JSON.stringify(linkRequest, (_, v) =>
+      typeof v === 'bigint' ? v.toString() : v
+    ));
+
+    const checkoutResult = await client.checkout.paymentLinks.create(linkRequest);
+
+    console.log('Payment link created:', checkoutResult.paymentLink?.url);
+
+    // 3. Insert member into Supabase as pending — the subscription.created
+    //    webhook will update status to active with the subscription ID
     const today = new Date().toISOString().split('T')[0];
     const { error: upsertErr } = await supabase.from('members').upsert(
       {
@@ -91,7 +90,8 @@ module.exports = async function handler(req, res) {
     res.status(200).json({ url: checkoutResult.paymentLink.url });
 
   } catch (err) {
-    console.error('Square checkout error:', err);
-    res.status(500).json({ error: 'Checkout failed', detail: err.message });
+    console.error('Square checkout error:', JSON.stringify(err, null, 2));
+    const detail = err.body?.errors?.[0]?.detail || err.message;
+    res.status(500).json({ error: 'Checkout failed', detail });
   }
 }
