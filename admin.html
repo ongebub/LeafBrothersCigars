@@ -365,6 +365,27 @@
   td.email { color: rgba(245,237,214,0.6); font-size: 13px; }
   td.phone { color: rgba(245,237,214,0.6); font-size: 13px; }
 
+  .loc-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    font-family: 'Cinzel', serif;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    border-radius: 2px;
+  }
+  .loc-ankeny {
+    color: var(--gold);
+    background: rgba(201,168,76,0.1);
+    border: 1px solid rgba(201,168,76,0.25);
+  }
+  .loc-waukee {
+    color: var(--cream);
+    background: rgba(245,237,214,0.08);
+    border: 1px solid rgba(245,237,214,0.18);
+  }
+
   .tier-badge {
     display: inline-block;
     padding: 3px 10px;
@@ -695,6 +716,7 @@
             <th onclick="sortBy('name')">Name</th>
             <th onclick="sortBy('email')">Email</th>
             <th onclick="sortBy('phone')">Phone</th>
+            <th onclick="sortBy('home_location')">Location</th>
             <th onclick="sortBy('tier')">Tier</th>
             <th onclick="sortBy('status')">Status</th>
             <th onclick="sortBy('locker_number')">Locker</th>
@@ -704,7 +726,7 @@
           </tr>
         </thead>
         <tbody id="member-tbody">
-          <tr><td colspan="9"><div class="loading"><span class="spinner"></span>Loading members...</div></td></tr>
+          <tr><td colspan="10"><div class="loading"><span class="spinner"></span>Loading members...</div></td></tr>
         </tbody>
       </table>
     </div>
@@ -821,12 +843,12 @@ function doLogout() {
 // ── DATA ─────────────────────────────────────────────────
 async function loadMembers() {
   const tbody = document.getElementById('member-tbody');
-  tbody.innerHTML = '<tr><td colspan="9"><div class="loading"><span class="spinner"></span>Loading members...</div></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="10"><div class="loading"><span class="spinner"></span>Loading members...</div></td></tr>';
 
   const { data, error } = await db.from('members').select('*').order('join_date', { ascending: false });
 
   if (error) {
-    tbody.innerHTML = `<tr><td colspan="9"><div class="loading">Error loading members: ${error.message}</div></td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10"><div class="loading">Error loading members: ${error.message}</div></td></tr>`;
     return;
   }
 
@@ -869,7 +891,7 @@ function renderTable() {
   const tbody = document.getElementById('member-tbody');
 
   if (filtered.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state">No members found.</div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10"><div class="empty-state">No members found.</div></td></tr>';
     return;
   }
 
@@ -886,6 +908,7 @@ function renderTable() {
       <td class="name">${esc(m.name || '—')}</td>
       <td class="email">${esc(m.email || '—')}</td>
       <td class="phone">${esc(m.phone || '—')}</td>
+      <td>${m.home_location ? `<span class="loc-badge loc-${m.home_location}">${m.home_location === 'ankeny' ? 'Ankeny' : 'Waukee'}</span>` : '—'}</td>
       <td><span class="tier-badge">${TIER_LABELS[m.tier] || esc(m.tier) || '—'}</span></td>
       <td><span class="status-badge status-${m.status || 'active'}">${m.status || 'active'}</span></td>
       <td>${m.locker_number ? `<span class="locker-val">${esc(m.locker_number)}</span>` : '<span class="locker-none">—</span>'}</td>
