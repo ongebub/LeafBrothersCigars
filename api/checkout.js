@@ -68,7 +68,7 @@ module.exports = async function handler(req, res) {
       },
       checkoutOptions: {
         subscriptionPlanId: plan.planId,
-        redirectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/member-welcome`,
+        redirectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/?welcome=1`,
         acceptedPaymentMethods: {
           applePay: true,
           googlePay: true,
