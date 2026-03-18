@@ -178,6 +178,12 @@ module.exports = async function handler(req, res) {
       const tier = custResult.customer?.referenceId;
       console.log('[webhook] Customer referenceId (tier):', tier);
 
+      // Skip non-membership payments (e.g. in-store POS transactions)
+      if (!tier) {
+        console.log('[webhook] Skipping non-membership payment — no referenceId on customer', customerId);
+        return res.status(200).json({ received: true });
+      }
+
       // Check if this customer already has a subscription (may have been created by Square)
       let subscriptionId = null;
       try {
