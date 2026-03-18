@@ -61,6 +61,7 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
 
   // Fetch member record
   const { data: members, error } = await sb.from('members').select('*').eq('email', email).limit(1);
+  console.log('[member] Supabase query result:', { data: members, error, email: session.user.email });
   if (error || !members || members.length === 0) {
     loading.textContent = 'Could not load membership data.';
     return;
