@@ -35,6 +35,25 @@ function verifySignature(signature, body) {
   }
 }
 
+// Create a Supabase Auth user so the member can log in to the portal
+async function createAuthUser(email) {
+  if (!email) return;
+  try {
+    const { data, error } = await supabase.auth.admin.createUser({
+      email,
+      email_confirm: false, // sends invite email with password-set link
+    });
+    if (error) {
+      // Duplicate user is fine — they already have an auth account
+      console.log('[webhook] Auth user creation skipped or failed:', error.message);
+    } else {
+      console.log('[webhook] Auth user created for:', email, 'id:', data.user?.id);
+    }
+  } catch (err) {
+    console.log('[webhook] Auth createUser error (non-fatal):', err.message);
+  }
+}
+
 // Activate a member in Supabase — shared by both payment and subscription handlers
 async function activateMember(customerId, subscriptionId, tier) {
   // Try to update existing pending row first
@@ -55,6 +74,7 @@ async function activateMember(customerId, subscriptionId, tier) {
 
   if (data && data.length > 0) {
     console.log('Member activated:', data[0]?.email, 'subscription:', subscriptionId);
+    await createAuthUser(data[0]?.email);
     return;
   }
 
@@ -75,7 +95,10 @@ async function activateMember(customerId, subscriptionId, tier) {
       square_subscription_id: subscriptionId || null,
     });
     if (insertErr) console.error('Supabase insert error:', insertErr);
-    else console.log('Member created from webhook:', customer.emailAddress);
+    else {
+      console.log('Member created from webhook:', customer.emailAddress);
+      await createAuthUser(customer.emailAddress);
+    }
   } catch (custErr) {
     console.error('Error fetching customer for insert:', custErr.message);
   }

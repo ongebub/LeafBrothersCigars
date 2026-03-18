@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Member Portal — Leaf Brothers Cigars</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--gold:#C9A84C;--cream:#F5EDD6;--dark1:#0A0804;--dark2:#151006;--muted:#9e9478}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--dark1);color:var(--cream);font-family:'Raleway',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.portal{max-width:520px;width:100%;background:var(--dark2);border:1px solid rgba(201,168,76,.15);border-radius:16px;padding:48px 40px;text-align:center}
+.portal h1{font-family:'Cinzel',serif;color:var(--gold);font-size:1.6rem;margin-bottom:6px}
+.portal .subtitle{font-family:'Cormorant Garamond',serif;color:var(--muted);font-size:.9rem;margin-bottom:32px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;text-align:left;margin-bottom:32px}
+.info-item label{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:4px}
+.info-item span{font-size:.95rem;color:var(--cream)}
+.info-item.full{grid-column:1/-1}
+.btn{display:inline-block;padding:13px 28px;border-radius:8px;font-family:'Raleway',sans-serif;font-size:.8rem;font-weight:600;letter-spacing:.5px;cursor:pointer;border:none;transition:all .3s}
+.btn-cancel{background:rgba(181,69,27,.12);color:#c0694a;border:1px solid rgba(181,69,27,.25)}
+.btn-cancel:hover{background:rgba(181,69,27,.22)}
+.btn-logout{background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
+.btn-logout:hover{background:rgba(201,168,76,.2)}
+.actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.msg{margin-top:20px;padding:14px;border-radius:8px;font-size:.8rem;display:none}
+.msg.success{display:block;background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
+.msg.error{display:block;background:rgba(181,69,27,.1);color:#c0694a;border:1px solid rgba(181,69,27,.2)}
+.loading{color:var(--muted);font-size:.85rem}
+.badge{display:inline-block;padding:5px 14px;border-radius:20px;font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;margin-bottom:24px}
+.badge.active{background:rgba(76,175,80,.1);color:#81c784;border:1px solid rgba(76,175,80,.2)}
+.badge.cancelled{background:rgba(181,69,27,.1);color:#c0694a;border:1px solid rgba(181,69,27,.2)}
+.badge.default{background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
+</style>
+</head>
+<body>
+
+<div class="portal" id="portal">
+  <p class="loading" id="loading">Loading your membership...</p>
+</div>
+
+<script>
+window.ENV_SUPABASE_URL = 'PASTE_SUPABASE_URL_HERE';
+window.ENV_SUPABASE_ANON_KEY = 'PASTE_ANON_KEY_HERE';
+</script>
+<script>
+(async function() {
+  const sb = window.supabase.createClient(window.ENV_SUPABASE_URL, window.ENV_SUPABASE_ANON_KEY);
+  const portal = document.getElementById('portal');
+  const loading = document.getElementById('loading');
+
+  // Check session
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session) {
+    window.location.href = '/?login=1';
+    return;
+  }
+
+  const email = session.user.email;
+
+  // Fetch member record
+  const { data: members, error } = await sb.from('members').select('*').eq('email', email).limit(1);
+  if (error || !members || members.length === 0) {
+    loading.textContent = 'Could not load membership data.';
+    return;
+  }
+
+  const m = members[0];
+
+  const statusClass = m.status === 'active' ? 'active' : m.status === 'cancelled' ? 'cancelled' : 'default';
+
+  portal.innerHTML = `
+    <h1>Member Portal</h1>
+    <p class="subtitle">Welcome back, ${m.name || 'Member'}</p>
+    <span class="badge ${statusClass}">${m.status || 'Unknown'}</span>
+    <div class="info-grid">
+      <div class="info-item"><label>Name</label><span>${m.name || 'N/A'}</span></div>
+      <div class="info-item"><label>Tier</label><span>${m.tier || 'N/A'}</span></div>
+      <div class="info-item"><label>Renewal Date</label><span>${m.renewal_date || 'N/A'}</span></div>
+      <div class="info-item"><label>Locker Number</label><span>${m.locker_number || 'N/A'}</span></div>
+    </div>
+    <div class="actions">
+      ${m.status === 'active' && m.square_subscription_id ? '<button class="btn btn-cancel" id="cancelBtn">Cancel Membership</button>' : ''}
+      <button class="btn btn-logout" id="logoutBtn">Log Out</button>
+    </div>
+    <div class="msg" id="msg"></div>
+  `;
+
+  // Cancel button
+  const cancelBtn = document.getElementById('cancelBtn');
+  if (cancelBtn) {
+    cancelBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to cancel your membership? Your access remains until the end of the billing period.')) return;
+      cancelBtn.disabled = true;
+      cancelBtn.textContent = 'Cancelling...';
+      const msg = document.getElementById('msg');
+      try {
+        const resp = await fetch('/api/cancel', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + session.access_token,
+          },
+          body: JSON.stringify({ subscriptionId: m.square_subscription_id }),
+        });
+        const result = await resp.json();
+        if (result.success) {
+          msg.className = 'msg success';
+          msg.textContent = 'Membership cancelled. Your access remains until the end of your billing period.';
+          cancelBtn.remove();
+        } else {
+          msg.className = 'msg error';
+          msg.textContent = result.error || 'Failed to cancel. Please contact support.';
+          cancelBtn.disabled = false;
+          cancelBtn.textContent = 'Cancel Membership';
+        }
+      } catch (e) {
+        msg.className = 'msg error';
+        msg.textContent = 'Network error. Please try again.';
+        cancelBtn.disabled = false;
+        cancelBtn.textContent = 'Cancel Membership';
+      }
+    });
+  }
+
+  // Logout button
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    window.location.href = '/';
+  });
+})();
+</script>
+</body>
+</html>
