@@ -29,6 +29,7 @@ module.exports = async function handler(req, res) {
   if (!plan) return res.status(400).json({ error: 'Invalid tier' });
 
   const e164Phone = formatPhone(phone);
+  console.log('[checkout] Phone input:', phone, '→ e164:', e164Phone);
 
   try {
     // 1. Create or find customer
