@@ -223,6 +223,19 @@ module.exports = async function handler(req, res) {
       const subscriptionId = sub.id;
       const customerId = sub.customer_id;
       const tier = PLAN_TO_TIER[sub.plan_variation_id] || null;
+
+      // Skip non-membership subscriptions
+      if (!tier && customerId) {
+        const custResult = await client.customers.get({ customerId });
+        if (!custResult.customer?.referenceId) {
+          console.log('[webhook] Skipping non-membership event (subscription.created) — no referenceId on customer', customerId);
+          return res.status(200).json({ received: true });
+        }
+      } else if (!tier) {
+        console.log('[webhook] Skipping non-membership event (subscription.created) — unknown plan variation', sub.plan_variation_id);
+        return res.status(200).json({ received: true });
+      }
+
       const subAgreedAt = sub.created_at || null;
 
       console.log('[webhook] Activating member from subscription.created:', { subscriptionId, customerId, tier, agreedAt: subAgreedAt });
@@ -232,6 +245,15 @@ module.exports = async function handler(req, res) {
     } else if (type === 'subscription.updated') {
       const sub = event.data?.object?.subscription;
       if (!sub) return res.status(200).json({ received: true });
+
+      // Skip non-membership subscriptions
+      if (sub.customer_id) {
+        const custResult = await client.customers.get({ customerId: sub.customer_id });
+        if (!custResult.customer?.referenceId) {
+          console.log('[webhook] Skipping non-membership event (subscription.updated) — no referenceId on customer', sub.customer_id);
+          return res.status(200).json({ received: true });
+        }
+      }
 
       const status = sub.status?.toLowerCase() || 'unknown';
       console.log('[webhook] subscription.updated:', sub.id, 'status:', status);
@@ -250,6 +272,15 @@ module.exports = async function handler(req, res) {
     } else if (type === 'subscription.deleted') {
       const sub = event.data?.object?.subscription;
       if (!sub) return res.status(200).json({ received: true });
+
+      // Skip non-membership subscriptions
+      if (sub.customer_id) {
+        const custResult = await client.customers.get({ customerId: sub.customer_id });
+        if (!custResult.customer?.referenceId) {
+          console.log('[webhook] Skipping non-membership event (subscription.deleted) — no referenceId on customer', sub.customer_id);
+          return res.status(200).json({ received: true });
+        }
+      }
 
       console.log('[webhook] subscription.deleted:', sub.id);
 

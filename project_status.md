@@ -29,7 +29,7 @@ The end-to-end membership flow is **live in production**:
 5. **Terms & Conditions** — Added scrollable T&C box + 3 required checkboxes to signup modal. Checkout button disabled until all checked. `terms_agreed_at` timestamptz saved to Supabase on checkout.
 6. **Move member insert to webhook** — Removed Supabase insert from `checkout.js`. `activateMember()` in `webhook.js` now does a full INSERT (name, email, phone, tier, status, join_date, square_customer_id, square_subscription_id, renewal_date, terms_agreed_at) if no row exists, or updates to active if one does.
 7. **terms_agreed_at from Square** — `activateMember()` now uses `payment.created_at` or `subscription.created_at` from the Square webhook payload for `terms_agreed_at`, rather than the webhook processing time.
-8. **Guard non-membership payments** — Payment webhook handler now skips customers without a `referenceId`, preventing in-store POS transactions from creating member rows.
+8. **Guard all webhook handlers** — Every event handler (payment.updated/completed, subscription.created/updated/deleted) now checks for a valid `referenceId` on the Square customer before touching Supabase. Non-membership events log and return early.
 
 ---
 
