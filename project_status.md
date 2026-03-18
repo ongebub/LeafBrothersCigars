@@ -1,5 +1,5 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-03-11 (Session 2)
+**Last updated:** 2026-03-18 (Session 3)
 
 ---
 
@@ -20,7 +20,15 @@ The end-to-end membership flow is **live in production**:
 
 ---
 
-## What Was Fixed This Session (in order)
+## Session 3 Changes (2026-03-18)
+
+1. **Member route** — Added `/member` rewrite to `vercel.json` so `member.html` is accessible at `/member`
+2. **Debug logging** — Added `console.log` in `member.html` after Supabase query to log data, error, and email
+3. **Admin real auth** — Replaced hardcoded password in `admin.html` with Supabase Auth login. Only `ongebub@gmail.com` can access the dashboard. Session persists across page reloads.
+
+---
+
+## What Was Fixed in Session 2 (in order)
 
 1. **CommonJS import error** — `Environment` was undefined; converted ESM → CommonJS in both API files
 2. **node_modules in Git** — Removed from tracking with `git rm -r --cached node_modules/`

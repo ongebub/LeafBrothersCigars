@@ -640,9 +640,10 @@
     <div class="login-emblem">Leaf Brothers Cigars</div>
     <div class="login-title">Member Administration</div>
     <div class="gold-bar" style="margin:0 auto 28px;"></div>
-    <input type="password" id="pw-input" class="login-input" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
+    <input type="email" id="email-input" class="login-input" placeholder="Admin email" onkeydown="if(event.key==='Enter')document.getElementById('pw-input').focus()">
+    <input type="password" id="pw-input" class="login-input" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="login-btn" onclick="doLogin()">Access Dashboard</button>
-    <div class="login-error" id="login-error">Incorrect password. Try again.</div>
+    <div class="login-error" id="login-error"></div>
   </div>
 </div>
 
@@ -805,10 +806,9 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────
-// IMPORTANT: Replace these with your actual Supabase credentials
 const SUPABASE_URL = 'https://afvnjekuiyhtjubphnuc.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmdm5qZWt1aXlodGp1YnBobnVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNDc1NjMsImV4cCI6MjA4ODgyMzU2M30.Z_D-uWotbQs37oHSidZdgKlZjJqr6v4-i4e-1jbyQNE';
-const ADMIN_PASSWORD = 'L3afBr0th3r$2026'; // Change this to a strong password
+const ADMIN_EMAIL = 'ongebub@gmail.com';
 
 // ────────────────────────────────────────────────────────
 
@@ -820,25 +820,60 @@ let sortCol = 'join_date';
 let sortAsc = false;
 
 // ── AUTH ─────────────────────────────────────────────────
-function doLogin() {
-  const val = document.getElementById('pw-input').value;
-  if (val === ADMIN_PASSWORD) {
-    document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('dashboard').style.display = 'block';
-    loadMembers();
-  } else {
-    const err = document.getElementById('login-error');
-    err.classList.add('show');
-    document.getElementById('pw-input').value = '';
-    setTimeout(() => err.classList.remove('show'), 3000);
-  }
+function showLoginError(msg) {
+  const err = document.getElementById('login-error');
+  err.textContent = msg;
+  err.classList.add('show');
+  setTimeout(() => err.classList.remove('show'), 4000);
 }
 
-function doLogout() {
+function showDashboard() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  loadMembers();
+}
+
+async function doLogin() {
+  const email = document.getElementById('email-input').value.trim();
+  const password = document.getElementById('pw-input').value;
+
+  if (!email || !password) {
+    showLoginError('Email and password are required.');
+    return;
+  }
+
+  const { data, error } = await db.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    showLoginError('Invalid email or password.');
+    document.getElementById('pw-input').value = '';
+    return;
+  }
+
+  if (data.user.email !== ADMIN_EMAIL) {
+    await db.auth.signOut();
+    showLoginError('Access denied. Admin accounts only.');
+    return;
+  }
+
+  showDashboard();
+}
+
+async function doLogout() {
+  await db.auth.signOut();
   document.getElementById('dashboard').style.display = 'none';
   document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('email-input').value = '';
   document.getElementById('pw-input').value = '';
 }
+
+// Check for existing session on page load
+(async function checkSession() {
+  const { data: { session } } = await db.auth.getSession();
+  if (session && session.user.email === ADMIN_EMAIL) {
+    showDashboard();
+  }
+})();
 
 // ── DATA ─────────────────────────────────────────────────
 async function loadMembers() {
