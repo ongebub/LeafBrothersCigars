@@ -30,6 +30,7 @@ The end-to-end membership flow is **live in production**:
 6. **Move member insert to webhook** — Removed Supabase insert from `checkout.js`. `activateMember()` in `webhook.js` now does a full INSERT (name, email, phone, tier, status, join_date, square_customer_id, square_subscription_id, renewal_date, terms_agreed_at) if no row exists, or updates to active if one does.
 7. **terms_agreed_at from Square** — `activateMember()` now uses `payment.created_at` or `subscription.created_at` from the Square webhook payload for `terms_agreed_at`, rather than the webhook processing time.
 8. **Guard all webhook handlers** — Every event handler (payment.updated/completed, subscription.created/updated/deleted) now checks for a valid `referenceId` on the Square customer before touching Supabase. Non-membership events log and return early.
+9. **Reuse existing Square customers** — `checkout.js` now searches for existing customer by email before creating a new one. Updates `referenceId` if missing on existing customer.
 
 ---
 

@@ -32,19 +32,34 @@ module.exports = async function handler(req, res) {
   console.log('[checkout] Phone input:', phone, '→ e164:', e164Phone);
 
   try {
-    // 1. Create or find customer
-    const customerRequest = {
-      givenName: name.split(' ')[0],
-      familyName: name.split(' ').slice(1).join(' '),
-      emailAddress: email,
-      referenceId: tier,
-    };
-    if (e164Phone) customerRequest.phoneNumber = e164Phone;
+    // 1. Find existing customer by email, or create a new one
+    let customerId;
+    const searchResult = await client.customers.search({
+      query: { filter: { emailAddress: { exact: email } } },
+    });
+    const existing = searchResult.customers?.[0];
 
-    const customerResult = await client.customers.create(customerRequest);
+    if (existing) {
+      customerId = existing.id;
+      console.log('[checkout] Found existing customer:', customerId, 'email:', email);
+      // Update referenceId to current tier if not already set
+      if (!existing.referenceId) {
+        await client.customers.update({ customerId, referenceId: tier });
+        console.log('[checkout] Updated customer referenceId to:', tier);
+      }
+    } else {
+      const customerRequest = {
+        givenName: name.split(' ')[0],
+        familyName: name.split(' ').slice(1).join(' '),
+        emailAddress: email,
+        referenceId: tier,
+      };
+      if (e164Phone) customerRequest.phoneNumber = e164Phone;
 
-    const customerId = customerResult.customer.id;
-    console.log('Customer created:', customerId, 'tier:', tier);
+      const customerResult = await client.customers.create(customerRequest);
+      customerId = customerResult.customer.id;
+      console.log('[checkout] Customer created:', customerId, 'tier:', tier);
+    }
 
     // 2. Create a subscription checkout payment link.
     //    Square's Subscription Plan Checkout handles everything:
