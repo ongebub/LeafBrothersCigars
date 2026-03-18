@@ -54,9 +54,11 @@ async function createAuthUser(email) {
   }
 }
 
-// Activate a member in Supabase — shared by both payment and subscription handlers
+// Activate a member in Supabase — shared by both payment and subscription handlers.
+// If a row already exists for this square_customer_id, update it to active.
+// Otherwise, fetch full details from Square and insert a new row.
 async function activateMember(customerId, subscriptionId, tier) {
-  // Try to update existing pending row first
+  // Try to update existing row first
   const { data, error } = await supabase
     .from('members')
     .update({
@@ -68,39 +70,56 @@ async function activateMember(customerId, subscriptionId, tier) {
     .select();
 
   if (error) {
-    console.error('Supabase update error:', error);
+    console.error('[webhook] Supabase update error:', error);
     return;
   }
 
   if (data && data.length > 0) {
-    console.log('Member activated:', data[0]?.email, 'subscription:', subscriptionId);
+    console.log('[webhook] Member activated:', data[0]?.email, 'subscription:', subscriptionId);
     await createAuthUser(data[0]?.email);
     return;
   }
 
-  // No pending row — create from Square customer data
-  console.log('No pending member row, creating from Square customer');
+  // No existing row — fetch customer + subscription from Square and insert
+  console.log('[webhook] No existing member row, creating from Square data');
   try {
     const custResult = await client.customers.get({ customerId });
     const customer = custResult.customer;
 
-    const { error: insertErr } = await supabase.from('members').insert({
+    // Get renewal date from subscription if available
+    let renewalDate = null;
+    if (subscriptionId) {
+      try {
+        const subResult = await client.subscriptions.get({ subscriptionId });
+        renewalDate = subResult.subscription?.chargedThroughDate || null;
+      } catch (subErr) {
+        console.log('[webhook] Subscription fetch error (non-fatal):', subErr.message);
+      }
+    }
+
+    const row = {
       name: [customer.givenName, customer.familyName].filter(Boolean).join(' '),
       email: customer.emailAddress,
-      phone: customer.phoneNumber,
+      phone: customer.phoneNumber || null,
       tier: tier || customer.referenceId || 'unknown',
       status: 'active',
       join_date: new Date().toISOString().split('T')[0],
       square_customer_id: customerId,
       square_subscription_id: subscriptionId || null,
-    });
-    if (insertErr) console.error('Supabase insert error:', insertErr);
-    else {
-      console.log('Member created from webhook:', customer.emailAddress);
+      renewal_date: renewalDate,
+      terms_agreed_at: new Date().toISOString(),
+    };
+
+    console.log('[webhook] Inserting new member:', { email: row.email, tier: row.tier });
+    const { error: insertErr } = await supabase.from('members').insert(row);
+    if (insertErr) {
+      console.error('[webhook] Supabase insert error:', insertErr);
+    } else {
+      console.log('[webhook] Member created from webhook:', row.email);
       await createAuthUser(customer.emailAddress);
     }
   } catch (custErr) {
-    console.error('Error fetching customer for insert:', custErr.message);
+    console.error('[webhook] Error fetching customer for insert:', custErr.message);
   }
 }
 

@@ -1,15 +1,8 @@
 const { SquareClient, SquareEnvironment } = require('square');
-const { createClient } = require('@supabase/supabase-js');
-
 const client = new SquareClient({
   token: process.env.SQUARE_ACCESS_TOKEN,
   environment: SquareEnvironment.Production,
 });
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
 
 const PLANS = {
   'select':          { name: 'Select Member',          amount: 1500, planId: 'WXS3UVFGTJ7Z5TOYUSMGX2GE' },
@@ -89,22 +82,6 @@ module.exports = async function handler(req, res) {
     const checkoutResult = await client.checkout.paymentLinks.create(linkRequest);
 
     console.log('Payment link created:', checkoutResult.paymentLink?.url);
-
-    // 3. Insert member into Supabase as pending — the subscription.created
-    //    webhook will update status to active with the subscription ID
-    const today = new Date().toISOString().split('T')[0];
-    const { error: insertErr } = await supabase.from('members').insert({
-      name,
-      email,
-      phone,
-      tier,
-      home_location: home_location || null,
-      status: 'pending',
-      join_date: today,
-      square_customer_id: customerId,
-      terms_agreed_at: new Date().toISOString(),
-    });
-    if (insertErr) console.error('Supabase insert error:', insertErr);
 
     res.status(200).json({ url: checkoutResult.paymentLink.url });
 

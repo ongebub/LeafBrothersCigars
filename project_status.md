@@ -27,6 +27,7 @@ The end-to-end membership flow is **live in production**:
 3. **Admin real auth** — Replaced hardcoded password in `admin.html` with Supabase Auth login. Only `ongebub@gmail.com` can access the dashboard. Session persists across page reloads.
 4. **Contact form** — Wired contact form in `index.html` to Formspree (`meervvad`). JSON POST via fetch, success toast, form clear, validation.
 5. **Terms & Conditions** — Added scrollable T&C box + 3 required checkboxes to signup modal. Checkout button disabled until all checked. `terms_agreed_at` timestamptz saved to Supabase on checkout.
+6. **Move member insert to webhook** — Removed Supabase insert from `checkout.js`. `activateMember()` in `webhook.js` now does a full INSERT (name, email, phone, tier, status, join_date, square_customer_id, square_subscription_id, renewal_date, terms_agreed_at) if no row exists, or updates to active if one does.
 
 ---
 
