@@ -25,6 +25,8 @@ The end-to-end membership flow is **live in production**:
 1. **Member route** — Added `/member` rewrite to `vercel.json` so `member.html` is accessible at `/member`
 2. **Debug logging** — Added `console.log` in `member.html` after Supabase query to log data, error, and email
 3. **Admin real auth** — Replaced hardcoded password in `admin.html` with Supabase Auth login. Only `ongebub@gmail.com` can access the dashboard. Session persists across page reloads.
+4. **Contact form** — Wired contact form in `index.html` to Formspree (`meervvad`). JSON POST via fetch, success toast, form clear, validation.
+5. **Terms & Conditions** — Added scrollable T&C box + 3 required checkboxes to signup modal. Checkout button disabled until all checked. `terms_agreed_at` timestamptz saved to Supabase on checkout.
 
 ---
 

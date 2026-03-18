@@ -102,6 +102,7 @@ module.exports = async function handler(req, res) {
       status: 'pending',
       join_date: today,
       square_customer_id: customerId,
+      terms_agreed_at: new Date().toISOString(),
     });
     if (insertErr) console.error('Supabase insert error:', insertErr);
 
