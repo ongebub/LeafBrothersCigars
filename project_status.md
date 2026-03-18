@@ -28,6 +28,7 @@ The end-to-end membership flow is **live in production**:
 4. **Contact form** — Wired contact form in `index.html` to Formspree (`meervvad`). JSON POST via fetch, success toast, form clear, validation.
 5. **Terms & Conditions** — Added scrollable T&C box + 3 required checkboxes to signup modal. Checkout button disabled until all checked. `terms_agreed_at` timestamptz saved to Supabase on checkout.
 6. **Move member insert to webhook** — Removed Supabase insert from `checkout.js`. `activateMember()` in `webhook.js` now does a full INSERT (name, email, phone, tier, status, join_date, square_customer_id, square_subscription_id, renewal_date, terms_agreed_at) if no row exists, or updates to active if one does.
+7. **terms_agreed_at from Square** — `activateMember()` now uses `payment.created_at` or `subscription.created_at` from the Square webhook payload for `terms_agreed_at`, rather than the webhook processing time.
 
 ---
 

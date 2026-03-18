@@ -57,7 +57,7 @@ async function createAuthUser(email) {
 // Activate a member in Supabase — shared by both payment and subscription handlers.
 // If a row already exists for this square_customer_id, update it to active.
 // Otherwise, fetch full details from Square and insert a new row.
-async function activateMember(customerId, subscriptionId, tier) {
+async function activateMember(customerId, subscriptionId, tier, agreedAt) {
   // Try to update existing row first
   const { data, error } = await supabase
     .from('members')
@@ -107,7 +107,7 @@ async function activateMember(customerId, subscriptionId, tier) {
       square_customer_id: customerId,
       square_subscription_id: subscriptionId || null,
       renewal_date: renewalDate,
-      terms_agreed_at: new Date().toISOString(),
+      terms_agreed_at: agreedAt || new Date().toISOString(),
     };
 
     console.log('[webhook] Inserting new member:', { email: row.email, tier: row.tier });
@@ -200,8 +200,9 @@ module.exports = async function handler(req, res) {
         console.log('[webhook] Subscription search error (non-fatal):', subErr.message);
       }
 
-      console.log('[webhook] Activating member:', { customerId, subscriptionId, tier });
-      await activateMember(customerId, subscriptionId, tier);
+      const paymentAgreedAt = payment.created_at || null;
+      console.log('[webhook] Activating member:', { customerId, subscriptionId, tier, agreedAt: paymentAgreedAt });
+      await activateMember(customerId, subscriptionId, tier, paymentAgreedAt);
 
     // ── Subscription created (Square fires this after subscription checkout) ──
     } else if (type === 'subscription.created') {
@@ -216,9 +217,10 @@ module.exports = async function handler(req, res) {
       const subscriptionId = sub.id;
       const customerId = sub.customer_id;
       const tier = PLAN_TO_TIER[sub.plan_variation_id] || null;
+      const subAgreedAt = sub.created_at || null;
 
-      console.log('[webhook] Activating member from subscription.created:', { subscriptionId, customerId, tier });
-      await activateMember(customerId, subscriptionId, tier);
+      console.log('[webhook] Activating member from subscription.created:', { subscriptionId, customerId, tier, agreedAt: subAgreedAt });
+      await activateMember(customerId, subscriptionId, tier, subAgreedAt);
 
     // ── Subscription updated ──
     } else if (type === 'subscription.updated') {
