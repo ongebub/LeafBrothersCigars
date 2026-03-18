@@ -102,8 +102,25 @@ module.exports = async function handler(req, res) {
     res.status(200).json({ url: checkoutResult.paymentLink.url });
 
   } catch (err) {
-    console.error('Square checkout error:', JSON.stringify(err, null, 2));
-    const detail = err.body?.errors?.[0]?.detail || err.message;
-    res.status(500).json({ error: 'Checkout failed', detail });
+    console.error('[checkout] Square error:', JSON.stringify(err, null, 2));
+    const squareErrors = err.body?.errors || err.errors || [];
+    const statusCode = err.statusCode || 500;
+
+    // Parse field-level errors from Square response
+    const fieldErrors = {};
+    let detail = err.message || 'Checkout failed';
+    for (const e of squareErrors) {
+      detail = e.detail || detail;
+      const field = (e.field || '').toLowerCase();
+      if (field.includes('phone')) fieldErrors.phone = e.detail;
+      else if (field.includes('email')) fieldErrors.email = e.detail;
+      else if (field.includes('given_name') || field.includes('family_name')) fieldErrors.name = e.detail;
+    }
+
+    res.status(statusCode >= 400 && statusCode < 500 ? 400 : 500).json({
+      error: 'Checkout failed',
+      detail,
+      fieldErrors: Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined,
+    });
   }
 }
