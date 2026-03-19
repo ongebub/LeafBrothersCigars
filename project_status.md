@@ -36,7 +36,7 @@ The end-to-end membership flow is **live in production**:
 12. **Member route** — Added `/member` rewrite to `vercel.json`
 13. **Debug logging** — Phone formatter logging in `checkout.js`, Supabase query logging in `member.html`
 14. **Forgot Password** — Added reset password flow to login modal. Calls `supabase.auth.resetPasswordForEmail()` with redirect to `/member`.
-15. **Password recovery handler** — `member.html` checks URL hash for `type=recovery` on page load (not `onAuthStateChange`), immediately shows reset form, skips dashboard load. Calls `updateUser()`, redirects to `/member` on success.
+15. **Password recovery handler** — `member.html` checks URL hash for `type=recovery` on page load (not `onAuthStateChange`), immediately shows reset form, skips dashboard load. Calls `updateUser()`, confirms session via `getSession()`, redirects to `/member` with clean URL. Member data load retries session up to 3x to handle async token exchange.
 
 ---
 

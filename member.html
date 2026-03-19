@@ -92,12 +92,24 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
         return;
       }
       msg.className = 'msg success'; msg.textContent = 'Password updated! Redirecting...';
-      setTimeout(() => { window.location.href = '/member'; }, 1500);
+      // Confirm session is active before redirecting with clean URL
+      await sb.auth.getSession();
+      setTimeout(() => { window.location.replace('/member'); }, 1500);
     });
   }
 
+  // Wait for a valid session, retrying briefly in case tokens are still exchanging
+  async function waitForSession(retries) {
+    for (let i = 0; i < retries; i++) {
+      const { data: { session } } = await sb.auth.getSession();
+      if (session) return session;
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return null;
+  }
+
   // Check session — getSession() also exchanges hash tokens for recovery
-  const { data: { session } } = await sb.auth.getSession();
+  const session = await waitForSession(3);
 
   // If recovery mode, the form is already showing — don't load dashboard
   if (isRecovery) return;
