@@ -32,6 +32,13 @@ body{background:var(--dark1);color:var(--cream);font-family:'Raleway',sans-serif
 .badge.active{background:rgba(76,175,80,.1);color:#81c784;border:1px solid rgba(76,175,80,.2)}
 .badge.cancelled{background:rgba(181,69,27,.1);color:#c0694a;border:1px solid rgba(181,69,27,.2)}
 .badge.default{background:rgba(201,168,76,.1);color:var(--gold);border:1px solid rgba(201,168,76,.2)}
+.reset-form{text-align:left;margin-top:24px}
+.reset-form label{display:block;font-size:.65rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:4px}
+.reset-form input{width:100%;padding:12px 14px;background:var(--dark1);border:1px solid rgba(201,168,76,.2);border-radius:8px;color:var(--cream);font-family:'Raleway',sans-serif;font-size:.85rem;outline:none;margin-bottom:16px;transition:border-color .2s}
+.reset-form input:focus{border-color:var(--gold)}
+.btn-gold{background:var(--gold);color:var(--dark1);font-weight:700}
+.btn-gold:hover{background:#e0b84e}
+.btn-gold:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 <body>
@@ -50,12 +57,57 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
   const portal = document.getElementById('portal');
   const loading = document.getElementById('loading');
 
+  // Listen for password recovery event (from reset email link)
+  let isRecovery = false;
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'PASSWORD_RECOVERY' && !isRecovery) {
+      isRecovery = true;
+      showResetForm();
+    }
+  });
+
+  function showResetForm() {
+    portal.innerHTML = `
+      <h1>Set New Password</h1>
+      <p class="subtitle">Enter your new password below</p>
+      <div class="reset-form">
+        <label>New Password</label>
+        <input type="password" id="rpNew" placeholder="Min. 8 characters">
+        <label>Confirm Password</label>
+        <input type="password" id="rpConfirm" placeholder="Re-enter password">
+      </div>
+      <button class="btn btn-gold" id="rpBtn" style="width:100%;margin-top:8px">Update Password</button>
+      <div class="msg" id="rpMsg"></div>
+    `;
+    document.getElementById('rpBtn').addEventListener('click', async () => {
+      const pw = document.getElementById('rpNew').value;
+      const confirm = document.getElementById('rpConfirm').value;
+      const msg = document.getElementById('rpMsg');
+      const btn = document.getElementById('rpBtn');
+      msg.className = 'msg'; msg.style.display = 'none';
+      if (!pw || pw.length < 8) { msg.className = 'msg error'; msg.textContent = 'Password must be at least 8 characters.'; return; }
+      if (pw !== confirm) { msg.className = 'msg error'; msg.textContent = 'Passwords do not match.'; return; }
+      btn.disabled = true; btn.textContent = 'Updating...';
+      const { error } = await sb.auth.updateUser({ password: pw });
+      if (error) {
+        msg.className = 'msg error'; msg.textContent = error.message;
+        btn.disabled = false; btn.textContent = 'Update Password';
+        return;
+      }
+      msg.className = 'msg success'; msg.textContent = 'Password updated! Redirecting...';
+      setTimeout(() => { window.location.href = '/member'; }, 1500);
+    });
+  }
+
   // Check session
   const { data: { session } } = await sb.auth.getSession();
   if (!session) {
     window.location.href = '/?login=1';
     return;
   }
+
+  // If recovery mode was triggered, don't load the dashboard
+  if (isRecovery) return;
 
   const email = session.user.email;
 
