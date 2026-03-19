@@ -3,66 +3,69 @@
 
 ---
 
-## ✅ FULLY WORKING AS OF THIS SESSION
+## ✅ FULLY WORKING AS OF SESSION 3
 
 The end-to-end membership flow is **live in production**:
 
-1. User fills out signup modal → POST `/api/checkout`
-2. Square customer created with `referenceId: tier`
+1. User fills out signup modal (with T&C checkboxes) → POST `/api/checkout`
+2. Square customer searched by email — reuse existing or create new with `referenceId: tier`
 3. Square hosted checkout URL returned → user redirected
 4. User pays on Square's page (card, Apple Pay, Cash App)
 5. Square fires `subscription.created` + `payment.updated` webhooks
-6. Webhook activates member in Supabase with `status: active` + `square_subscription_id`
-7. User redirected to `/?welcome=1` → welcome toast + login modal opens
-8. Member record visible in admin dashboard at `/admin`
-
-**Verified working:** Test member "Test One" — Select Member, $15/mo, Active since 03/11/2026, renews 04/11/2026. Supabase record confirmed. Square subscription confirmed.
-
----
-
-## Session 3 Changes (2026-03-18)
-
-1. **Member route** — Added `/member` rewrite to `vercel.json` so `member.html` is accessible at `/member`
-2. **Debug logging** — Added `console.log` in `member.html` after Supabase query to log data, error, and email
-3. **Admin real auth** — Replaced hardcoded password in `admin.html` with Supabase Auth login. Only `ongebub@gmail.com` can access the dashboard. Session persists across page reloads.
-4. **Contact form** — Wired contact form in `index.html` to Formspree (`meervvad`). JSON POST via fetch, success toast, form clear, validation.
-5. **Terms & Conditions** — Added scrollable T&C box + 3 required checkboxes to signup modal. Checkout button disabled until all checked. `terms_agreed_at` timestamptz saved to Supabase on checkout.
-6. **Move member insert to webhook** — Removed Supabase insert from `checkout.js`. `activateMember()` in `webhook.js` now does a full INSERT (name, email, phone, tier, status, join_date, square_customer_id, square_subscription_id, renewal_date, terms_agreed_at) if no row exists, or updates to active if one does.
-7. **terms_agreed_at from Square** — `activateMember()` now uses `payment.created_at` or `subscription.created_at` from the Square webhook payload for `terms_agreed_at`, rather than the webhook processing time.
-8. **Guard all webhook handlers** — Every event handler (payment.updated/completed, subscription.created/updated/deleted) now checks for a valid `referenceId` on the Square customer before touching Supabase. Non-membership events log and return early.
-9. **Reuse existing Square customers** — `checkout.js` now searches for existing customer by email before creating a new one. Updates `referenceId` if missing on existing customer.
-10. **Field-level checkout errors** — `checkout.js` parses Square error `field` values and returns `fieldErrors` object. Frontend shows targeted inline messages (phone, email, name) next to the relevant form fields.
+6. Webhook checks `referenceId` (skips non-membership events), creates/activates member in Supabase
+7. Supabase Auth user created → invite email sent with password-set link
+8. User redirected to `/?welcome=1` → welcome toast + login modal opens
+9. Member logs in via Supabase Auth → redirected to `/member` portal
+10. Member record visible in admin dashboard at `/admin` (Supabase Auth, admin-only)
 
 ---
 
-## What Was Fixed in Session 2 (in order)
+## Session 3 Completed (2026-03-18)
 
-1. **CommonJS import error** — `Environment` was undefined; converted ESM → CommonJS in both API files
-2. **node_modules in Git** — Removed from tracking with `git rm -r --cached node_modules/`
-3. **Webhook snake_case bug** — Square payloads use `customer_id` not `customerId`; fixed all field access
-4. **Webhook signature verification** — Added `SQUARE_WEBHOOK_URL` env var, switched to `timingSafeEqual`
-5. **`cards.list()` API** — v44 uses `cards.list({ customerId })` not `customers.cards.list()`
-6. **Silent Supabase failures** — Added error logging throughout checkout and webhook
-7. **Webhook wrong event type** — Was only handling `subscription.*` events; Square sends `payment.updated` which was silently ignored. Fixed to handle both.
-8. **Checkout 500 error** — `MISSING_REQUIRED_PARAMETER`: Square requires `quickPay` or `order` alongside `subscriptionPlanId`. Added `quickPay` with tier name + amount.
-9. **Phone number format** — Square requires E.164 (`+15155550100`); added formatter.
-10. **Wrong plan ID type** — `subscriptionPlanId` must be a **variation ID**, not parent plan ID. Created variations via raw `fetch()` (SDK v44 converts field names and breaks it).
-11. **Supabase upsert error** — No unique constraint on email; switched from `.upsert()` to `.insert()`
-12. **Welcome redirect** — After Square checkout, `?welcome=1` triggers toast + login modal, then URL cleaned to `/`
-13. **Nav login button styling** — Fixed CSS alignment in navbar
+1. **Real member auth** — `submitLogin()` replaced with Supabase `signInWithPassword()`, redirects to `/member` on success
+2. **Member portal** — `member.html` created with name, tier, status, renewal date, locker number, cancel button, logout
+3. **Cancel API** — `api/cancel.js` created, validates Supabase JWT, calls Square `subscriptions.cancel()`
+4. **Admin dashboard auth** — Replaced hardcoded JS password with Supabase Auth login. Only `ongebub@gmail.com` can access. Session persists across reloads.
+5. **RLS policies** — Enabled on `members` table. Anon blocked, service role bypasses, admin (`ongebub@gmail.com`) has full CRUD.
+6. **Formspree contact form** — Wired to `https://formspree.io/f/meervvad`. JSON POST via fetch, success toast, form clear, validation.
+7. **Terms & Conditions** — Scrollable T&C box in signup modal with 3 required checkboxes. `terms_agreed_at` timestamptz stored in Supabase.
+8. **Removed pending insert from checkout** — Member rows now only created by webhook on confirmed payment. `checkout.js` no longer touches Supabase.
+9. **POS transaction guard** — All webhook handlers (payment.updated/completed, subscription.created/updated/deleted) check for `referenceId` on the Square customer before touching Supabase. In-store POS sales are ignored.
+10. **Reuse existing Square customers** — `checkout.js` searches for existing customer by email before creating. Updates `referenceId` if missing.
+11. **Field-level checkout errors** — `checkout.js` parses Square error `field` values and returns `fieldErrors` object. Frontend shows inline messages next to phone/email/name fields.
+12. **Member route** — Added `/member` rewrite to `vercel.json`
+13. **Debug logging** — Phone formatter logging in `checkout.js`, Supabase query logging in `member.html`
+14. **Forgot Password** — Added reset password flow to login modal. Calls `supabase.auth.resetPasswordForEmail()` with redirect to `/member`.
 
 ---
 
-## Files Changed This Session
-- **api/checkout.js** — Full rewrite: CommonJS, Square SDK v44, quickPay, phone E.164, plan variation IDs, Supabase insert
-- **api/webhook.js** — Full rewrite: snake_case fields, payment.updated/completed handling, subscription handlers, activateMember() shared function, logging prefix `[webhook]`
-- **index.html** — Welcome redirect toast, login modal trigger, nav button CSS fix
-- **api/debug-plans.js** — Created and deleted (used to create plan variations)
-- **vercel.json** — No changes needed
+## Session 2 Completed (2026-03-11)
+
+1. CommonJS import error — converted ESM → CommonJS in both API files
+2. node_modules in Git — removed from tracking
+3. Webhook snake_case bug — fixed all field access
+4. Webhook signature verification — added `SQUARE_WEBHOOK_URL` env var, `timingSafeEqual`
+5. `cards.list()` API — v44 uses `cards.list({ customerId })`
+6. Silent Supabase failures — added error logging
+7. Webhook wrong event type — added `payment.updated` handling
+8. Checkout 500 — added `quickPay` alongside `subscriptionPlanId`
+9. Phone number format — E.164 formatter
+10. Wrong plan ID type — switched to variation IDs
+11. Supabase upsert error — switched to `.insert()`
+12. Welcome redirect — `?welcome=1` triggers toast + login modal
+13. Nav login button styling fix
 
 ---
 
 ## Critical Technical Details
+
+### Current Architecture
+- **`api/checkout.js`** — Searches/creates Square customer, creates payment link. No Supabase interaction.
+- **`api/webhook.js`** — Handles all Square events. Creates member row in Supabase on first confirmed payment. Guards all handlers with `referenceId` check.
+- **`api/cancel.js`** — Validates Supabase JWT, cancels Square subscription
+- **`member.html`** — Member portal (Supabase Auth protected)
+- **`admin.html`** — Admin dashboard (Supabase Auth, `ongebub@gmail.com` only)
+- **`index.html`** — Main site with signup modal, login modal, contact form
 
 ### Square SDK v44 (Breaking Changes)
 - Use `SquareClient` / `SquareEnvironment` (not `Client` / `Environment`)
@@ -90,29 +93,31 @@ These are `SUBSCRIPTION_PLAN_VARIATION` IDs for `checkoutOptions.subscriptionPla
 - `SQUARE_ACCESS_TOKEN` — Square production API token
 - `SQUARE_LOCATION_ID` — `KGBZ7RVNAWRT8`
 - `SQUARE_WEBHOOK_SECRET` — Webhook signature key
-- `SQUARE_WEBHOOK_URL` — `https://www.leafbrotherscigars.com/api/webhook` ← **added this session**
+- `SQUARE_WEBHOOK_URL` — `https://www.leafbrotherscigars.com/api/webhook`
 - `SUPABASE_URL` — Supabase project URL
 - `SUPABASE_SERVICE_KEY` — Supabase service role key
 - `NEXT_PUBLIC_SITE_URL` — `https://www.leafbrotherscigars.com`
 
 ### Supabase `members` Table
-Columns: `name, email, phone, tier, home_location, status, join_date, square_customer_id, square_subscription_id, renewal_date, locker_number`
+Columns: `name, email, phone, tier, home_location, status, join_date, square_customer_id, square_subscription_id, renewal_date, locker_number, terms_agreed_at`
 - **No unique constraint on email** — always use `.insert()` not `.upsert(onConflict: email)`
 - `home_location` added manually: `ALTER TABLE members ADD COLUMN home_location text;`
+- `terms_agreed_at` added: `ALTER TABLE members ADD COLUMN terms_agreed_at timestamptz;`
+- **RLS enabled** — anon blocked, service role bypasses, admin (`ongebub@gmail.com`) has full access
 
 ### Square Webhook Events (Production — all configured)
-- `payment.created` — logged but no action (subscription.created handles activation)
-- `payment.updated` — activates member if payment.status === 'COMPLETED'
-- `subscription.created` — primary activation path
-- `subscription.updated` — handled
-- `subscription.deleted` — handled (should cancel member in Supabase)
+All handlers check `referenceId` on the Square customer before acting:
+- `payment.created` — logged but no action
+- `payment.updated` / `payment.completed` — creates or activates member if `COMPLETED` + has `referenceId`
+- `subscription.created` — creates or activates member (checks `PLAN_TO_TIER` map or `referenceId`)
+- `subscription.updated` — updates status + renewal_date in Supabase
+- `subscription.deleted` — sets status to `cancelled` in Supabase
 
 ### Square Loyalty Program
 - Leaf Brothers has an active loyalty program in Square
 - The checkout page shows a loyalty 404 for new customers — this is **expected** (no account yet)
 - After first payment, Square should auto-create a loyalty account
-- **Unverified**: whether points accrue on recurring subscription renewals (not just first payment)
-- To verify: Square Dashboard → Loyalty → Accounts → check for member after signup
+- **Unverified**: whether points accrue on recurring subscription renewals
 
 ---
 
@@ -127,27 +132,29 @@ Columns: `name, email, phone, tier, home_location, status, join_date, square_cus
 8. Vercel serverless functions are CommonJS — no `import`/`export`
 9. Square Developer Dashboard defaults to **Sandbox** — always check the Production toggle
 10. Webhook `SQUARE_WEBHOOK_URL` env var must match exactly what's in Square Dashboard (no trailing slash, must be `www`)
+11. Non-membership Square events (POS sales) will fire webhooks too — always guard with `referenceId` check
+12. Don't insert member rows at checkout time — wait for confirmed payment via webhook
 
 ---
 
 ## Next Session Priorities
 
 ### 🔴 High Priority
-- [ ] **Real member login** — `submitLogin()` in index.html is still a frontend mock (just sets sessionStorage). Needs Supabase Auth or email lookup + token. Members can't actually authenticate.
-- [ ] **Admin dashboard real auth** — `/admin` is protected by a JS `prompt()` password check only. Should use at minimum HTTP basic auth or Supabase Auth.
-- [ ] **Clean up duplicate/test members** in Supabase from today's testing (Chris Morrill, Test One, etc.)
+- [ ] **End-to-end signup test** — Real member signup through full flow: form → Square checkout → webhook → Supabase row → login → member portal. Verify all fields populated correctly.
+- [ ] **Verify webhook creates full member row** — Check that name, email, phone, tier, status, join_date, square_customer_id, square_subscription_id, renewal_date, terms_agreed_at are all populated on new signup
+- [ ] **Test member login** — Verify Supabase Auth invite email arrives, password set works, login redirects to `/member`
+- [ ] **Clean up test members** in Supabase from sessions 2-3 (Chris Morrill, Test One, etc.)
 
 ### 🟡 Medium Priority
-- [ ] **Contact form backend** — Form in footer is frontend-only. Sign up at Formspree.io, get endpoint, replace `<form>` action. ~5 min fix.
-- [ ] **Verify loyalty points** — Check Square Dashboard → Loyalty → Accounts after a real member signs up to confirm points are accruing
-- [ ] **Subscription cancellation flow** — `subscription.deleted` webhook is handled in code but untested. What happens in Supabase when a member cancels?
-- [ ] **Renewal date accuracy** — `renewal_date` in Supabase may not be populated correctly. Verify it's being set from Square's `charged_through_date`.
+- [ ] **Subscription cancellation flow test** — Cancel from member portal, verify `subscription.deleted` webhook fires, member status → cancelled in Supabase
+- [ ] **Renewal date accuracy** — Verify `charged_through_date` is populating `renewal_date` correctly via `subscription.updated` webhook
+- [ ] **Verify loyalty point accrual** — Check Square Dashboard → Loyalty → Accounts after real signup
+- [ ] **Checkout 500 error** — Last attempt returned 500 from Square; need to reproduce and check logs for specific error detail
 
 ### 🟢 Nice to Have
 - [ ] **Google Analytics** — Add GA4 tracking tag to `<head>` of index.html
 - [ ] **SEO** — Add `og:image` meta tag, structured data for local business
 - [ ] **Renewal email notifications** — Trigger via `subscription.updated` webhook
-- [ ] **Member portal** — Real dashboard showing tier, renewal date, locker info post-login
 - [ ] **Events section** — Tatuaje, Illusione & Surrogates event (March 26) needs updating after it passes
 
 ---
@@ -161,12 +168,16 @@ git push
 ```
 Auth: HTTPS with GitHub Personal Access Token (Settings → Developer Settings → Personal Access Tokens → Classic)
 
-## Recent Commits This Session
-- `75a7de0` — Welcome redirect toast + login modal after Square checkout
-- `632acaf` — Switch Supabase upsert → insert (no unique email constraint)
-- `1c59f84` — Wire plan variation IDs into checkout + webhook, delete debug files
-- `28d208d` — Create plan variations via raw fetch (SDK v44 bypass)
-- `5e7a866` — Add quickPay to checkout request
-- `d52c6ed` — E.164 phone number formatter
-- `f807963` — Fix webhook: snake_case fields, signature verification, event handling
-- `401d43e` — Fix Square SDK Environment import
+## Recent Commits (Session 3)
+- `688968c` — Field-level error handling for checkout failures
+- `563502f` — Search for existing Square customer by email before creating
+- `f1df7ee` — Phone debug logging in checkout.js
+- `cfb14c7` — Guard all webhook handlers against non-membership events
+- `cdff5a0` — Skip non-membership payments in webhook handler
+- `0dbed59` — Use Square payment/subscription timestamp for terms_agreed_at
+- `f26f61e` — Move member insert from checkout to webhook
+- `89bc529` — Add T&C box and required checkboxes to signup modal
+- `301bae4` — Wire contact form to Formspree endpoint
+- `497aeab` — Replace admin hardcoded password with Supabase Auth login
+- `4d2f855` — Add debug logging to member.html Supabase query
+- `a19a8df` — Add /member rewrite route to vercel.json
