@@ -57,14 +57,11 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
   const portal = document.getElementById('portal');
   const loading = document.getElementById('loading');
 
-  // Listen for password recovery event (from reset email link)
-  let isRecovery = false;
-  sb.auth.onAuthStateChange((event) => {
-    if (event === 'PASSWORD_RECOVERY' && !isRecovery) {
-      isRecovery = true;
-      showResetForm();
-    }
-  });
+  // Check URL hash for recovery token before anything else
+  const isRecovery = window.location.hash.includes('type=recovery');
+  if (isRecovery) {
+    showResetForm();
+  }
 
   function showResetForm() {
     portal.innerHTML = `
@@ -99,15 +96,16 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
     });
   }
 
-  // Check session
+  // Check session — getSession() also exchanges hash tokens for recovery
   const { data: { session } } = await sb.auth.getSession();
+
+  // If recovery mode, the form is already showing — don't load dashboard
+  if (isRecovery) return;
+
   if (!session) {
     window.location.href = '/?login=1';
     return;
   }
-
-  // If recovery mode was triggered, don't load the dashboard
-  if (isRecovery) return;
 
   const email = session.user.email;
 
