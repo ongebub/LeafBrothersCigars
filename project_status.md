@@ -1,5 +1,5 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-03-18 (Session 3)
+**Last updated:** 2026-04-21 (Session 4)
 
 ---
 
@@ -17,6 +17,16 @@ The end-to-end membership flow is **live in production**:
 8. User redirected to `/?welcome=1` → welcome toast + login modal opens
 9. Member logs in via Supabase Auth → redirected to `/member` portal
 10. Member record visible in admin dashboard at `/admin` (Supabase Auth, admin-only)
+
+---
+
+## Session 4 Completed (2026-04-21)
+
+1. **Home location feature** — Added `home_location` to the full membership flow:
+   - **Signup form** — Location selector conditionally shown based on tier. Hidden and auto-set to 'Both' for Select and Lounge Premium. Required Ankeny/Waukee choice for Lounge, Half Locker, and Locker tiers.
+   - **Checkout API** — Validates `home_location` is one of `Ankeny`, `Waukee`, `Both`. Stores in Square customer `note` field as `home_location:Ankeny` (referenceId untouched — POS guard safe).
+   - **Webhook** — New `parseHomeLocation()` reads customer note on member creation, writes to `home_location` column. Invalid/missing values → `null` + warning log.
+   - **Admin dashboard** — Editable `Home Location` dropdown (Ankeny, Waukee, Both) in add/edit modal. Table display handles all three values with styled badges (green for Both).
 
 ---
 
@@ -61,8 +71,8 @@ The end-to-end membership flow is **live in production**:
 ## Critical Technical Details
 
 ### Current Architecture
-- **`api/checkout.js`** — Searches/creates Square customer, creates payment link. No Supabase interaction.
-- **`api/webhook.js`** — Handles all Square events. Creates member row in Supabase on first confirmed payment. Guards all handlers with `referenceId` check.
+- **`api/checkout.js`** — Searches/creates Square customer, creates payment link. Stores `home_location` in customer note field. No Supabase interaction.
+- **`api/webhook.js`** — Handles all Square events. Creates member row in Supabase on first confirmed payment. Reads `home_location` from customer note field. Guards all handlers with `referenceId` check.
 - **`api/cancel.js`** — Validates Supabase JWT, cancels Square subscription
 - **`member.html`** — Member portal (Supabase Auth protected)
 - **`admin.html`** — Admin dashboard (Supabase Auth, `ongebub@gmail.com` only)
