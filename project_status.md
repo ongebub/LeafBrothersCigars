@@ -22,7 +22,14 @@ The end-to-end membership flow is **live in production**:
 
 ## Session 4 Completed (2026-04-21)
 
-1. **Home location feature** — Added `home_location` to the full membership flow:
+1. **Admin subscription cancellation** — Admins can now cancel a member's Square subscription from the admin dashboard:
+   - **Cancel button** in edit modal, visible only for active members with a `square_subscription_id`. Confirmation dialog warns it cannot be undone from admin UI.
+   - **`api/cancel.js` hardened** — Server-side admin check (`ongebub@gmail.com` can cancel any subscription). Non-admin users can only cancel subscriptions matching their own email in the members table. Previously any authenticated user could cancel any subscription ID.
+   - **Removed "cancelled" from admin status dropdown** — Prevents the footgun of setting status to "cancelled" in Supabase without actually cancelling the Square billing. Admins must use the Cancel Subscription button for real cancellations.
+   - **Status update handled by webhook** — The cancel button does NOT manually flip status in Supabase. Square fires `subscription.deleted` → webhook sets status to cancelled. This keeps Supabase in sync with Square's actual state.
+   - **Testing note**: End-to-end cancel flow (admin cancel → Square webhook → Supabase status update) should be tested by Chris against a test subscription. The `subscription.deleted` webhook path has been implemented but not fully tested in production.
+
+2. **Home location feature** — Added `home_location` to the full membership flow:
    - **Signup form** — Location selector conditionally shown based on tier. Hidden and auto-set to 'Both' for Select and Lounge Premium. Required Ankeny/Waukee choice for Lounge, Half Locker, and Locker tiers.
    - **Checkout API** — Validates `home_location` is one of `Ankeny`, `Waukee`, `Both`. Stores in Square customer `note` field as `home_location:Ankeny` (referenceId untouched — POS guard safe).
    - **Webhook** — New `parseHomeLocation()` reads customer note on member creation, writes to `home_location` column. Invalid/missing values → `null` + warning log.

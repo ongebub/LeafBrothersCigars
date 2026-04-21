@@ -779,7 +779,6 @@
         <select id="f-status" class="field-select">
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
-          <option value="cancelled">Cancelled</option>
         </select>
       </div>
     </div>
@@ -807,6 +806,10 @@
     <div class="field-group">
       <label class="field-label">Renewal Date</label>
       <input type="date" id="f-renewal" class="field-input">
+    </div>
+
+    <div id="cancel-sub-section" style="display:none; margin-top:16px; padding:14px; border:1px solid rgba(181,69,27,0.3); background:rgba(181,69,27,0.06);">
+      <button id="cancel-sub-btn" style="width:100%; padding:10px; background:rgba(181,69,27,0.15); color:#c0694a; border:1px solid rgba(181,69,27,0.35); font-family:'Cinzel',serif; font-size:11px; letter-spacing:0.15em; text-transform:uppercase; cursor:pointer;" onclick="cancelSubscription()">Cancel Square Subscription</button>
     </div>
 
     <div class="modal-actions">
@@ -978,7 +981,10 @@ function sortBy(col) {
 }
 
 // ── MODAL ─────────────────────────────────────────────────
+let editingMember = null;
+
 function openAddModal() {
+  editingMember = null;
   document.getElementById('modal-title').textContent = 'Add Member';
   document.getElementById('edit-id').value = '';
   document.getElementById('f-name').value = '';
@@ -990,12 +996,14 @@ function openAddModal() {
   document.getElementById('f-locker').value = '';
   document.getElementById('f-join').value = new Date().toISOString().split('T')[0];
   document.getElementById('f-renewal').value = '';
+  document.getElementById('cancel-sub-section').style.display = 'none';
   document.getElementById('member-modal').classList.add('open');
 }
 
 function openEditModal(id) {
   const m = allMembers.find(x => x.id === id);
   if (!m) return;
+  editingMember = m;
   document.getElementById('modal-title').textContent = 'Edit Member';
   document.getElementById('edit-id').value = m.id;
   document.getElementById('f-name').value = m.name || '';
@@ -1007,6 +1015,9 @@ function openEditModal(id) {
   document.getElementById('f-locker').value = m.locker_number || '';
   document.getElementById('f-join').value = m.join_date || '';
   document.getElementById('f-renewal').value = m.renewal_date || '';
+  // Show cancel button only for active members with a Square subscription
+  const showCancel = m.square_subscription_id && m.status === 'active';
+  document.getElementById('cancel-sub-section').style.display = showCancel ? 'block' : 'none';
   document.getElementById('member-modal').classList.add('open');
 }
 
@@ -1048,6 +1059,42 @@ async function saveMember() {
   closeModal();
   showToast(id ? 'Member updated.' : 'Member added.');
   await loadMembers();
+}
+
+async function cancelSubscription() {
+  if (!editingMember || !editingMember.square_subscription_id) return;
+  const name = editingMember.name || 'this member';
+  if (!confirm(`Cancel ${name}'s Square subscription?\n\nThey will keep access until the end of their current billing period, then billing will stop. This cannot be undone from the admin UI.`)) return;
+
+  const btn = document.getElementById('cancel-sub-btn');
+  btn.disabled = true;
+  btn.textContent = 'Cancelling...';
+
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    const resp = await fetch('/api/cancel', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + session.access_token,
+      },
+      body: JSON.stringify({ subscriptionId: editingMember.square_subscription_id }),
+    });
+    const result = await resp.json();
+    if (result.success) {
+      closeModal();
+      showToast('Subscription cancelled. Square webhook will update status shortly.');
+      await loadMembers();
+    } else {
+      showToast('Cancel failed: ' + (result.detail || result.error));
+      btn.disabled = false;
+      btn.textContent = 'Cancel Square Subscription';
+    }
+  } catch (e) {
+    showToast('Network error cancelling subscription.');
+    btn.disabled = false;
+    btn.textContent = 'Cancel Square Subscription';
+  }
 }
 
 async function deleteMember(id, name) {
