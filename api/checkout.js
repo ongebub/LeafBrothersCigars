@@ -28,6 +28,11 @@ module.exports = async function handler(req, res) {
   const plan = PLANS[tier];
   if (!plan) return res.status(400).json({ error: 'Invalid tier' });
 
+  const VALID_LOCATIONS = ['Ankeny', 'Waukee', 'Both'];
+  if (!home_location || !VALID_LOCATIONS.includes(home_location)) {
+    return res.status(400).json({ error: 'Invalid home_location' });
+  }
+
   const e164Phone = formatPhone(phone);
   console.log('[checkout] Phone input:', phone, '→ e164:', e164Phone);
 
@@ -42,17 +47,18 @@ module.exports = async function handler(req, res) {
     if (existing) {
       customerId = existing.id;
       console.log('[checkout] Found existing customer:', customerId, 'email:', email);
-      // Update referenceId to current tier if not already set
-      if (!existing.referenceId) {
-        await client.customers.update({ customerId, referenceId: tier });
-        console.log('[checkout] Updated customer referenceId to:', tier);
-      }
+      // Update referenceId to current tier if not already set, and store home_location in note
+      const updates = { customerId, note: `home_location:${home_location}` };
+      if (!existing.referenceId) updates.referenceId = tier;
+      await client.customers.update(updates);
+      console.log('[checkout] Updated customer:', { referenceId: updates.referenceId || '(unchanged)', note: updates.note });
     } else {
       const customerRequest = {
         givenName: name.split(' ')[0],
         familyName: name.split(' ').slice(1).join(' '),
         emailAddress: email,
         referenceId: tier,
+        note: `home_location:${home_location}`,
       };
       if (e164Phone) customerRequest.phoneNumber = e164Phone;
 

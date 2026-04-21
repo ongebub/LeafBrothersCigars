@@ -54,6 +54,17 @@ async function createAuthUser(email) {
   }
 }
 
+// Parse home_location from Square customer note field (format: "home_location:Ankeny")
+function parseHomeLocation(note) {
+  if (!note) return null;
+  const match = note.match(/home_location:(Ankeny|Waukee|Both)/);
+  if (!match) {
+    console.warn('[webhook] home_location missing or invalid in customer note:', note);
+    return null;
+  }
+  return match[1];
+}
+
 // Activate a member in Supabase — shared by both payment and subscription handlers.
 // If a row already exists for this square_customer_id, update it to active.
 // Otherwise, fetch full details from Square and insert a new row.
@@ -97,11 +108,14 @@ async function activateMember(customerId, subscriptionId, tier, agreedAt) {
       }
     }
 
+    const homeLocation = parseHomeLocation(customer.note);
+
     const row = {
       name: [customer.givenName, customer.familyName].filter(Boolean).join(' '),
       email: customer.emailAddress,
       phone: customer.phoneNumber || null,
       tier: tier || customer.referenceId || 'unknown',
+      home_location: homeLocation,
       status: 'active',
       join_date: new Date().toISOString().split('T')[0],
       square_customer_id: customerId,

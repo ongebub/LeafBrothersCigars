@@ -385,6 +385,11 @@
     background: rgba(245,237,214,0.08);
     border: 1px solid rgba(245,237,214,0.18);
   }
+  .loc-both {
+    color: var(--green-light);
+    background: rgba(82,183,136,0.1);
+    border: 1px solid rgba(82,183,136,0.25);
+  }
 
   .tier-badge {
     display: inline-block;
@@ -781,6 +786,15 @@
 
     <div class="modal-grid">
       <div class="field-group">
+        <label class="field-label">Home Location</label>
+        <select id="f-location" class="field-select">
+          <option value="">— None —</option>
+          <option value="Ankeny">Ankeny</option>
+          <option value="Waukee">Waukee</option>
+          <option value="Both">Both</option>
+        </select>
+      </div>
+      <div class="field-group">
         <label class="field-label">Locker Number</label>
         <input type="text" id="f-locker" class="field-input" placeholder="e.g. A12">
       </div>
@@ -943,7 +957,7 @@ function renderTable() {
       <td class="name">${esc(m.name || '—')}</td>
       <td class="email">${esc(m.email || '—')}</td>
       <td class="phone">${esc(m.phone || '—')}</td>
-      <td>${m.home_location ? `<span class="loc-badge loc-${m.home_location}">${m.home_location === 'ankeny' ? 'Ankeny' : 'Waukee'}</span>` : '—'}</td>
+      <td>${m.home_location ? `<span class="loc-badge loc-${m.home_location.toLowerCase()}">${esc(m.home_location)}</span>` : '—'}</td>
       <td><span class="tier-badge">${TIER_LABELS[m.tier] || esc(m.tier) || '—'}</span></td>
       <td><span class="status-badge status-${m.status || 'active'}">${m.status || 'active'}</span></td>
       <td>${m.locker_number ? `<span class="locker-val">${esc(m.locker_number)}</span>` : '<span class="locker-none">—</span>'}</td>
@@ -972,6 +986,7 @@ function openAddModal() {
   document.getElementById('f-phone').value = '';
   document.getElementById('f-tier').value = 'select';
   document.getElementById('f-status').value = 'active';
+  document.getElementById('f-location').value = '';
   document.getElementById('f-locker').value = '';
   document.getElementById('f-join').value = new Date().toISOString().split('T')[0];
   document.getElementById('f-renewal').value = '';
@@ -988,6 +1003,7 @@ function openEditModal(id) {
   document.getElementById('f-phone').value = m.phone || '';
   document.getElementById('f-tier').value = m.tier || 'select';
   document.getElementById('f-status').value = m.status || 'active';
+  document.getElementById('f-location').value = m.home_location || '';
   document.getElementById('f-locker').value = m.locker_number || '';
   document.getElementById('f-join').value = m.join_date || '';
   document.getElementById('f-renewal').value = m.renewal_date || '';
@@ -1006,6 +1022,7 @@ async function saveMember() {
     phone: document.getElementById('f-phone').value.trim(),
     tier: document.getElementById('f-tier').value,
     status: document.getElementById('f-status').value,
+    home_location: document.getElementById('f-location').value || null,
     locker_number: document.getElementById('f-locker').value.trim() || null,
     join_date: document.getElementById('f-join').value || null,
     renewal_date: document.getElementById('f-renewal').value || null,

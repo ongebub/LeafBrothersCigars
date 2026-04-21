@@ -722,8 +722,8 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
       <span class="f-field-error" id="sNameErr"></span>
       <div class="f-group"><label class="f-lbl">Email Address</label><input class="f-input" type="email" id="sEmail" placeholder="you@example.com"><span class="f-field-error" id="sEmailErr"></span></div>
       <div class="f-group"><label class="f-lbl">Phone Number</label><input class="f-input" type="tel" id="sPhone" placeholder="(515) 555-0100"><span class="f-field-error" id="sPhoneErr"></span></div>
-      <div class="f-group"><label class="f-lbl">Home Location</label>
-        <select class="f-input" id="sLoc"><option value="">Select your home lounge</option><option value="ankeny">Ankeny</option><option value="waukee">Waukee</option></select>
+      <div class="f-group" id="sLocGroup"><label class="f-lbl">Home Location</label>
+        <select class="f-input" id="sLoc"><option value="">Select your home lounge</option><option value="Ankeny">Ankeny</option><option value="Waukee">Waukee</option></select>
       </div>
       <div class="f-group"><label class="f-lbl">Create Password</label><input class="f-input" type="password" id="sPass" placeholder="Min. 8 characters"></div>
       <p class="f-note">💳 Billing processed securely via Square. You'll be redirected to complete payment after submitting. Cancel anytime from your dashboard.</p>
@@ -821,7 +821,9 @@ document.querySelectorAll('.nav-links a').forEach(a=>a.addEventListener('click',
 const obs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.target.classList.add('vis');obs.unobserve(x.target)}})},{threshold:.07});
 document.querySelectorAll('.fi').forEach(el=>obs.observe(el));
 let cT='',cP=0;
-function openSignup(t,p){cT=t;cP=p;document.getElementById('mBadge').textContent=t;document.getElementById('mPrice').textContent='$'+p+' / month';document.getElementById('signupForm').style.display='block';document.getElementById('signupSuccess').style.display='none';document.querySelectorAll('.tc-cb').forEach(c=>c.checked=false);document.getElementById('signupBtn').disabled=true;document.getElementById('signupModal').classList.add('active')}
+function openSignup(t,p){cT=t;cP=p;document.getElementById('mBadge').textContent=t;document.getElementById('mPrice').textContent='$'+p+' / month';document.getElementById('signupForm').style.display='block';document.getElementById('signupSuccess').style.display='none';document.querySelectorAll('.tc-cb').forEach(c=>c.checked=false);document.getElementById('signupBtn').disabled=true;
+const tierSlug=TIER_MAP[t]||t;const locGroup=document.getElementById('sLocGroup');const locSel=document.getElementById('sLoc');if(tierSlug==='select'||tierSlug==='lounge-premium'){locGroup.style.display='none';locSel.value='Both'}else{locGroup.style.display='';locSel.value=''}
+document.getElementById('signupModal').classList.add('active')}
 function showLogin(e){if(e)e.preventDefault();document.getElementById('loginModal').classList.add('active')}
 function closeModal(id){document.getElementById(id).classList.remove('active')}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('active')}));
@@ -836,7 +838,8 @@ async function submitSignup(){
   const f=document.getElementById('sFirst').value,l=document.getElementById('sLast').value,e=document.getElementById('sEmail').value,ph=document.getElementById('sPhone').value,loc=document.getElementById('sLoc').value;
   const errEl=document.getElementById('signupError');errEl.style.display='none';
   clearFieldErrors();
-  if(!f||!l||!e||!loc){showToast('Please fill in all required fields.');return}
+  const tierSlug=TIER_MAP[cT]||cT;const locRequired=tierSlug!=='select'&&tierSlug!=='lounge-premium';
+  if(!f||!l||!e||(locRequired&&!loc)){showToast('Please fill in all required fields.');return}
   const btn=document.getElementById('signupBtn');const origText=btn.innerHTML;
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Processing…';
   try{
