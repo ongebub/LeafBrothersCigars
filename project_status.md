@@ -24,6 +24,7 @@ The end-to-end membership flow is **live in production**:
 
 1. **RyJ event day fix** — Corrected "Wednesday, April 30th" to "Thursday, April 30th" (April 30, 2026 is a Thursday).
 2. **Event Card 3 updated** — Renamed "Giveaways & Raffle" to "Buy-In Tiers & Raffle". Replaced generic description with structured buy-in tiers (5/10/20 cigars with escalating rewards), a note limiting tiers to featured event cigars, and a closing line about the premium ashtray raffle. Uses ✦ bullet styling consistent with membership tier perks.
+3. **RyJ image for email campaign** — Added `event-photos/ryj-reserva-real-profundo.png` in a new lowercase, hyphenated `event-photos/` directory. Accessible at `https://www.leafbrotherscigars.com/event-photos/ryj-reserva-real-profundo.png` after deploy. Original `Event Photos/` folder left untouched for existing event card references.
 
 ---
 
