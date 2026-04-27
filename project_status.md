@@ -1,5 +1,5 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-04-21 (Session 4)
+**Last updated:** 2026-04-27 (Session 5)
 
 ---
 
@@ -17,6 +17,13 @@ The end-to-end membership flow is **live in production**:
 8. User redirected to `/?welcome=1` → welcome toast + login modal opens
 9. Member logs in via Supabase Auth → redirected to `/member` portal
 10. Member record visible in admin dashboard at `/admin` (Supabase Auth, admin-only)
+
+---
+
+## Session 5 Updates (2026-04-27)
+
+1. **RyJ event day fix** — Corrected "Wednesday, April 30th" to "Thursday, April 30th" (April 30, 2026 is a Thursday).
+2. **Event Card 3 updated** — Renamed "Giveaways & Raffle" to "Buy-In Tiers & Raffle". Replaced generic description with structured buy-in tiers (5/10/20 cigars with escalating rewards), a note limiting tiers to featured event cigars, and a closing line about the premium ashtray raffle. Uses ✦ bullet styling consistent with membership tier perks.
 
 ---
 
