@@ -1,5 +1,5 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-04-27 (Session 5)
+**Last updated:** 2026-05-21 (Session 6)
 
 ---
 
@@ -17,6 +17,17 @@ The end-to-end membership flow is **live in production**:
 8. User redirected to `/?welcome=1` → welcome toast + login modal opens
 9. Member logs in via Supabase Auth → redirected to `/member` portal
 10. Member record visible in admin dashboard at `/admin` (Supabase Auth, admin-only)
+
+---
+
+## Session 6 Updates (2026-05-21)
+
+1. **Mid-Cap All Stars event brand images** — Added four brand images to `event-photos/` for the upcoming Mid-Cap All Stars event:
+   - `jake-wyatt-lineup.jpg` — Jake Wyatt 5-cigar lineup shot (converted from PNG)
+   - `mayflower.jpg` — Mayflower cigars with chocolate/salt
+   - `warfighter.jpg` — Warfighter cigars on tactical pack
+   - `west-tampa.jpg` — West Tampa Tobacco Co. cigars
+   - All accessible at `https://www.leafbrotherscigars.com/event-photos/<filename>` after deploy.
 
 ---
 
