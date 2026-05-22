@@ -20,6 +20,18 @@ The end-to-end membership flow is **live in production**:
 
 ---
 
+## Session 7 Updates (2026-05-22)
+
+1. **`/menu` TV display page** — New `menu.html` for 40" Fire Stick displays at 1920×1080. Three auto-rotating slides (10s/10s/5s loop, instant cut transitions):
+   - **Slide 1**: Bourbon, Scotch, Vodka with single/double pricing
+   - **Slide 2**: Tequila, Whiskey, Rum, Wine, Beer, Cocktails
+   - **Slide 3**: 4-Brand Cigar Event (May 28) — Jake Wyatt, Mayflower, Warfighter, West Tampa with 2×2 photo grid and buy-in deal tiers
+   - Auto-refreshes hourly via `<meta http-equiv="refresh">` to pick up menu edits
+   - Event images copied to `assets/` directory for clean referencing
+   - `/menu` rewrite added to `vercel.json`
+
+---
+
 ## Session 6 Updates (2026-05-21)
 
 1. **Mid-Cap All Stars event brand images** — Added four brand images to `event-photos/` for the upcoming Mid-Cap All Stars event:
@@ -103,6 +115,7 @@ The end-to-end membership flow is **live in production**:
 - **`member.html`** — Member portal (Supabase Auth protected)
 - **`admin.html`** — Admin dashboard (Supabase Auth, `ongebub@gmail.com` only)
 - **`index.html`** — Main site with signup modal, login modal, contact form
+- **`menu.html`** — TV display page for Fire Stick (bar menu + event slide, auto-rotating, hourly refresh)
 
 ### Square SDK v44 (Breaking Changes)
 - Use `SquareClient` / `SquareEnvironment` (not `Client` / `Environment`)

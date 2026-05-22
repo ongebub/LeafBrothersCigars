@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1920">
+  <meta http-equiv="refresh" content="3600">
+  <title>Leaf Brothers — Bar Menu</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #0a0a0a;
+      cursor: none;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      font-family: Calibri, Arial, sans-serif;
+      color: #FFFFFF;
+    }
+
+    .slide-container {
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .slide {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: none;
+      overflow: hidden;
+    }
+
+    .slide.active { display: block; }
+
+    /* Background image pseudo-element for slides 1 & 2 */
+    .slide-bar::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: url('assets/bar-bg.jpg') center center / cover no-repeat;
+      filter: brightness(0.3);
+      z-index: 0;
+    }
+
+    .slide-bar > * { position: relative; z-index: 1; }
+
+    /* Slide 3 background */
+    .slide-event { background: #0D0A07; }
+
+    /* Header area (logo + BAR MENU) */
+    .header {
+      text-align: center;
+      padding-top: 2vh;
+    }
+
+    .header img {
+      width: 280px;
+      display: block;
+      margin: 0 auto;
+    }
+
+    .header h1 {
+      font-family: Georgia, serif;
+      font-style: italic;
+      color: #C9A34E;
+      font-size: 2.2vh;
+      letter-spacing: 0.8vw;
+      margin-top: 0.8vh;
+      font-weight: 400;
+    }
+
+    .header-rule {
+      width: 40vw;
+      height: 1px;
+      background: #C9A34E;
+      margin: 1vh auto 0.5vh;
+    }
+
+    .pricing-label {
+      text-align: center;
+      color: #C8C0A8;
+      font-size: 1.5vh;
+      letter-spacing: 0.15vw;
+      margin-bottom: 1vh;
+    }
+
+    .pricing-label-left {
+      color: #C8C0A8;
+      font-size: 1.5vh;
+      letter-spacing: 0.15vw;
+      margin-bottom: 1vh;
+      padding-left: 6vw;
+    }
+
+    /* Two-column layout */
+    .columns {
+      display: flex;
+      width: 100%;
+      height: calc(100vh - 16vh);
+      padding: 0;
+    }
+
+    .col {
+      width: 50%;
+      padding: 0 4vw;
+    }
+
+    .col-left { padding-left: 6vw; }
+    .col-right { padding-left: 3vw; padding-right: 6vw; }
+
+    /* Category */
+    .category {
+      margin-bottom: 2vh;
+    }
+
+    .category h2 {
+      font-family: Georgia, serif;
+      color: #C9A34E;
+      font-size: 2vh;
+      font-weight: 700;
+      letter-spacing: 0.3vw;
+      margin-bottom: 0.4vh;
+    }
+
+    .cat-rule {
+      width: 120px;
+      height: 1.5px;
+      background: #C9A34E;
+      margin-bottom: 1vh;
+    }
+
+    /* Item rows */
+    .item {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      padding: 0.35vh 0;
+      font-size: 1.8vh;
+      line-height: 1.4;
+    }
+
+    .item-name { color: #FFFFFF; }
+
+    .item-price {
+      color: #D4B062;
+      white-space: nowrap;
+      padding-left: 1vw;
+    }
+
+    /* ===== SLIDE 3 — EVENT ===== */
+    .event-layout {
+      display: flex;
+      width: 100%;
+      height: 100vh;
+    }
+
+    .event-left {
+      width: 48%;
+      padding: 4vh 3vw 3vh 5vw;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .event-left img {
+      width: 220px;
+      margin-bottom: 2.5vh;
+    }
+
+    .event-title {
+      font-family: Georgia, serif;
+      font-style: italic;
+      color: #C9A34E;
+      font-size: 5.5vh;
+      line-height: 1.1;
+      font-weight: 700;
+    }
+
+    .event-subtitle {
+      font-family: Georgia, serif;
+      color: #FFFFFF;
+      font-size: 4vh;
+      letter-spacing: 0.5vw;
+      font-weight: 400;
+      margin-bottom: 1.5vh;
+    }
+
+    .event-rule {
+      width: 120px;
+      height: 1.5px;
+      background: #C9A34E;
+      margin: 1.5vh 0;
+    }
+
+    .event-date {
+      font-family: Georgia, serif;
+      color: #C9A34E;
+      font-size: 2.8vh;
+      font-weight: 700;
+      margin-bottom: 0.5vh;
+    }
+
+    .event-time {
+      color: #FFFFFF;
+      font-size: 2vh;
+      margin-bottom: 2vh;
+    }
+
+    .event-featuring-label {
+      color: #C9A34E;
+      font-size: 1.4vh;
+      letter-spacing: 0.4vw;
+      text-transform: uppercase;
+      margin-bottom: 0.6vh;
+      font-weight: 700;
+    }
+
+    .event-brands {
+      font-family: Georgia, serif;
+      font-style: italic;
+      color: #C8C0A8;
+      font-size: 2vh;
+      margin-bottom: 1.5vh;
+    }
+
+    .deal-tier {
+      font-size: 1.9vh;
+      padding: 0.5vh 0;
+      line-height: 1.4;
+    }
+
+    .deal-tier strong {
+      color: #C9A34E;
+    }
+
+    .event-footer {
+      font-family: Georgia, serif;
+      font-style: italic;
+      color: #C8C0A8;
+      font-size: 1.5vh;
+      margin-top: 0.5vh;
+    }
+
+    /* Right side — 2x2 grid */
+    .event-right {
+      width: 52%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      height: 100vh;
+    }
+
+    .photo-cell {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #C9A34E;
+    }
+
+    .photo-cell img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .photo-label {
+      position: absolute;
+      bottom: 0;
+      left: 0; right: 0;
+      background: rgba(10, 8, 4, 0.75);
+      text-align: center;
+      padding: 1vh 0;
+      font-family: Georgia, serif;
+      font-variant: small-caps;
+      color: #C9A34E;
+      font-size: 1.8vh;
+      letter-spacing: 0.2vw;
+    }
+  </style>
+</head>
+<body>
+
+<div class="slide-container">
+
+  <!-- SLIDE 1: Bourbon / Scotch + Vodka -->
+  <div class="slide slide-bar active" id="slide1">
+    <div class="header">
+      <img src="favicon.png" alt="Leaf Brothers">
+      <h1>BAR MENU</h1>
+      <div class="header-rule"></div>
+    </div>
+    <div class="pricing-label">Single / Double</div>
+    <div class="columns">
+      <div class="col col-left">
+        <div class="category">
+          <h2>BOURBON</h2>
+          <div class="cat-rule"></div>
+          <div class="item"><span class="item-name">Maker's Mark</span><span class="item-price">$10 / $15</span></div>
+          <div class="item"><span class="item-name">Elijah Craig 12yr</span><span class="item-price">$10 / $15</span></div>
+          <div class="item"><span class="item-name">Woodford Reserve</span><span class="item-price">$11 / $16</span></div>
+          <div class="item"><span class="item-name">Four Roses Small Batch</span><span class="item-price">$11 / $16</span></div>
+          <div class="item"><span class="item-name">Knob Creek</span><span class="item-price">$11 / $16</span></div>
+          <div class="item"><span class="item-name">Basil Hayden</span><span class="item-price">$11 / $16</span></div>
+          <div class="item"><span class="item-name">Heaven Hill</span><span class="item-price">$11 / $16</span></div>
+          <div class="item"><span class="item-name">Penelope Architect</span><span class="item-price">$11 / $16</span></div>
+          <div class="item"><span class="item-name">Michter's Straight Rye</span><span class="item-price">$12 / $17</span></div>
+          <div class="item"><span class="item-name">Angel's Envy</span><span class="item-price">$12 / $17</span></div>
+        </div>
+      </div>
+      <div class="col col-right">
+        <div class="category">
+          <h2>SCOTCH</h2>
+          <div class="cat-rule"></div>
+          <div class="item"><span class="item-name">Dewar's White Label</span><span class="item-price">$8 / $13</span></div>
+          <div class="item"><span class="item-name">Glenfiddich 12yr</span><span class="item-price">$10 / $15</span></div>
+          <div class="item"><span class="item-name">Glenlivet 12yr</span><span class="item-price">$10 / $15</span></div>
+          <div class="item"><span class="item-name">Chivas Regal 12yr</span><span class="item-price">$10 / $15</span></div>
+          <div class="item"><span class="item-name">Balvenie 12yr</span><span class="item-price">$12 / $17</span></div>
+        </div>
+        <div class="category">
+          <h2>VODKA</h2>
+          <div class="cat-rule"></div>
+          <div class="item"><span class="item-name">Tito's</span><span class="item-price">$8 / $12</span></div>
+          <div class="item"><span class="item-name">Grey Goose</span><span class="item-price">$10 / $15</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 2: Tequila/Whiskey/Rum / Wine/Beer/Cocktails -->
+  <div class="slide slide-bar" id="slide2">
+    <div class="header">
+      <img src="favicon.png" alt="Leaf Brothers">
+      <h1>BAR MENU</h1>
+      <div class="header-rule"></div>
+    </div>
+    <div class="pricing-label-left">Single / Double</div>
+    <div class="columns">
+      <div class="col col-left">
+        <div class="category">
+          <h2>TEQUILA</h2>
+          <div class="cat-rule"></div>
+          <div class="item"><span class="item-name">Don Julio</span><span class="item-price">$10 / $15</span></div>
+          <div class="item"><span class="item-name">Patr&oacute;n Silver</span><span class="item-price">$12 / $17</span></div>
+        </div>
+        <div class="category">
+          <h2>WHISKEY</h2>
+          <div class="cat-rule"></div>
+          <div class="item"><span class="item-name">Crown Royal</span><span class="item-price">$8 / $13</span></div>
+          <div class="item"><span class="item-name">Jameson</span><span class="item-price">$8 / $13</span></div>
+          <div class="item"><span class="item-name">Jack Daniel's</span><span class="item-price">$8 / $13</span></div>
+        </div>
+        <div class="category">
+          <h2>RUM</h2>
+          <div class="cat-rule"></div>
+          <div class="item"><span class="item-name">Captain Morgan</span><span class="item-price">$7 / $12</span></div>
+          <div class="item"><span class="item-name">Flor de Ca&ntilde;a 7yr</span><span class="item-price">$9 / $14</span></div>
+        </div>
+      </div>
+      <div class="col col-right">
+        <div class="category">
+          <h2>WINE</h2>
+          <div class="cat-rule"></div>
+          <div class="item"><span class="item-name">Red</span><span class="item-price">$6</span></div>
+          <div class="item"><span class="item-name">White</span><span class="item-price">$6</span></div>
+        </div>
+        <div class="category">
+          <h2>BEER</h2>
+          <div class="cat-rule"></div>
+          <div class="item"><span class="item-name">Confluence Beers (16oz)</span><span class="item-price">$6</span></div>
+          <div class="item"><span class="item-name">Confluence Cider (16oz)</span><span class="item-price">$6</span></div>
+          <div class="item"><span class="item-name">Old Tavern</span><span class="item-price">$4</span></div>
+          <div class="item"><span class="item-name">Domestics</span><span class="item-price">$4</span></div>
+          <div class="item"><span class="item-name">Seltzers</span><span class="item-price">$5</span></div>
+        </div>
+        <div class="category">
+          <h2>COCKTAILS</h2>
+          <div class="cat-rule"></div>
+          <div class="item"><span class="item-name">Old Fashioned (Maker's)</span><span class="item-price">$11</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: 4-Brand Cigar Event -->
+  <div class="slide slide-event" id="slide3">
+    <div class="event-layout">
+      <div class="event-left">
+        <img src="favicon.png" alt="Leaf Brothers">
+        <div class="event-title">4-BRAND</div>
+        <div class="event-subtitle">CIGAR EVENT</div>
+        <div class="event-rule"></div>
+        <div class="event-date">THURSDAY, MAY 28TH</div>
+        <div class="event-time">5:00 – 8:00 PM &nbsp;&bull;&nbsp; BOTH LOCATIONS</div>
+        <div class="event-rule"></div>
+        <div class="event-featuring-label">FEATURING</div>
+        <div class="event-brands">Jake Wyatt &nbsp;&bull;&nbsp; Mayflower &nbsp;&bull;&nbsp; Warfighter &nbsp;&bull;&nbsp; West Tampa</div>
+        <div class="event-rule"></div>
+        <div class="deal-tier"><strong>BUY 5, GET 1</strong> — Free Cigar</div>
+        <div class="deal-tier"><strong>BUY 10, GET 2</strong> — Free Cigars + Swag</div>
+        <div class="deal-tier"><strong>BUY 20, GET 3</strong> — Free Cigars + Humidor or Hat</div>
+        <div class="event-rule" style="margin-top: 2vh;"></div>
+        <div class="event-footer">Ask your tobacconist for details</div>
+      </div>
+      <div class="event-right">
+        <div class="photo-cell">
+          <img src="assets/event-jake-wyatt.jpg" alt="Jake Wyatt">
+          <div class="photo-label">Jake Wyatt</div>
+        </div>
+        <div class="photo-cell">
+          <img src="assets/event-mayflower.jpg" alt="Mayflower">
+          <div class="photo-label">Mayflower</div>
+        </div>
+        <div class="photo-cell">
+          <img src="assets/event-warfighter.jpg" alt="Warfighter">
+          <div class="photo-label">Warfighter</div>
+        </div>
+        <div class="photo-cell">
+          <img src="assets/event-west-tampa.jpg" alt="West Tampa">
+          <div class="photo-label">West Tampa</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  var slides = [
+    { id: 'slide1', duration: 10 },
+    { id: 'slide2', duration: 10 },
+    { id: 'slide3', duration: 5 }
+  ];
+  var current = 0;
+  var elapsed = 0;
+
+  function advance() {
+    document.getElementById(slides[current].id).classList.remove('active');
+    current = (current + 1) % slides.length;
+    document.getElementById(slides[current].id).classList.add('active');
+    elapsed = 0;
+  }
+
+  setInterval(function() {
+    elapsed++;
+    if (elapsed >= slides[current].duration) {
+      advance();
+    }
+  }, 1000);
+</script>
+
+</body>
+</html>
