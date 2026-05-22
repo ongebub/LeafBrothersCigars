@@ -29,6 +29,7 @@ The end-to-end membership flow is **live in production**:
    - Auto-refreshes hourly via `<meta http-equiv="refresh">` to pick up menu edits
    - Event images copied to `assets/` directory for clean referencing
    - `/menu` rewrite added to `vercel.json`
+   - Font sizes doubled across all slides for Fire Stick legibility at 40" viewing distance
 
 ---
 
