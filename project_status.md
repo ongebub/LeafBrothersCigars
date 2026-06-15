@@ -20,6 +20,15 @@ The end-to-end membership flow is **live in production**:
 
 ---
 
+## Session 8 Updates (2026-06-15)
+
+1. **`/jobs` job application page** — New `jobs.html` for prospective hires to apply online:
+   - Submits applications to Formspree endpoint `meervvad` (`https://formspree.io/f/meervvad`)
+   - **Math CAPTCHA** and **honeypot field** for bot protection
+   - `/jobs` rewrite added to `vercel.json`
+
+---
+
 ## Session 7 Updates (2026-05-22)
 
 1. **`/menu` TV display page** — New `menu.html` for 40" Fire Stick displays at 1920×1080. Three auto-rotating slides (10s/10s/5s loop, instant cut transitions):
