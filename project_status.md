@@ -27,6 +27,16 @@ The end-to-end membership flow is **live in production**:
    - **Math CAPTCHA** and **honeypot field** for bot protection
    - `/jobs` rewrite added to `vercel.json`
 
+2. **Events section updated for Dunbarton June 25th event** — Replaced all prior events in `index.html` (`#events`) with a single **Dunbarton Tobacco & Trust** event:
+   - **Thursday, June 25th, 5:00 PM – 8:00 PM**
+   - Header banner uses two DTT cigar photos (`event-photos/20190315_150514.jpg`, `event-photos/20220120_125052.jpg`) with a gold/dark overlay
+   - Four purchase tiers, each with its matching giveaway photo from `event-photos/`:
+     - Tier 1 — Spend $100: 1 Free Umbagog Cigar
+     - Tier 2 — Spend $200: 2 Free Umbagog Cigars + Saka Kahn Statue (`DTT SKA KAHN Statue.jpeg`)
+     - Tier 3 — Spend $300: 3 Free Umbagog Cigars + DTT Mug or Beanie (`DTT MUG.jpeg`)
+     - Tier 4 — Spend $400: 5 Free Umbagog Cigars + DTT Hat (`DTT Hat.jpeg`)
+   - New `.dtt-banner` / `.tier-grid` CSS styled to the existing black-and-gold branding (Cinzel/Cormorant fonts, gold `#C9A84C`), responsive down to 1 column on mobile
+
 ---
 
 ## Session 7 Updates (2026-05-22)

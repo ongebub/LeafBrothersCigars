@@ -176,6 +176,28 @@ section{padding:110px 60px}
 .evt-name{font-family:'Cormorant Garamond',serif;font-size:1.2rem;margin-bottom:6px}
 .evt-desc{font-size:.72rem;color:var(--muted);line-height:1.65;margin-bottom:12px}
 .evt-tag{font-family:'Cinzel',serif;font-size:.48rem;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(201,168,76,.25);padding:3px 10px;display:inline-block}
+/* ── DUNBARTON EVENT ── */
+.dtt-banner{position:relative;margin-top:50px;border:1px solid rgba(201,168,76,.18);overflow:hidden}
+.dtt-banner-imgs{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:rgba(201,168,76,.12)}
+.dtt-banner-imgs img{width:100%;height:320px;object-fit:cover;filter:brightness(.5) saturate(.85);display:block}
+.dtt-banner-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:linear-gradient(to bottom,rgba(13,10,6,.55),rgba(13,10,6,.8));padding:24px}
+.dtt-brand{font-family:'Cormorant Garamond',serif;font-size:2.8rem;font-weight:600;color:var(--gold);line-height:1.05;margin-bottom:10px;text-shadow:0 2px 20px rgba(0,0,0,.65)}
+.dtt-sub{font-family:'Cinzel',serif;font-size:.56rem;letter-spacing:.38em;text-transform:uppercase;color:var(--cream);margin-bottom:20px}
+.dtt-date{font-family:'Cinzel',serif;font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(201,168,76,.45);background:rgba(13,10,6,.45);padding:10px 24px}
+.tier-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:rgba(201,168,76,.1);margin-top:1px}
+.tier-evt{background:var(--dark3);overflow:hidden;display:flex;flex-direction:column;transition:background .3s}
+.tier-evt:hover{background:var(--dark4)}
+.tier-evt-img{width:100%;height:200px;object-fit:cover;filter:brightness(.72) saturate(.9);display:block;transition:all .5s}
+.tier-evt:hover .tier-evt-img{filter:brightness(.92) saturate(1)}
+.tier-evt-body{padding:24px 22px 28px;display:flex;flex-direction:column;flex:1}
+.tier-evt-no{font-family:'Cinzel',serif;font-size:.5rem;letter-spacing:.28em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.tier-evt-spend{font-family:'Cormorant Garamond',serif;font-size:1.7rem;font-weight:600;color:var(--gold);line-height:1;margin-bottom:14px}
+.tier-evt-rule{width:24px;height:1px;background:var(--gold-dk);margin-bottom:16px}
+.tier-evt-perks{display:flex;flex-direction:column;gap:9px}
+.tier-evt-perk{font-size:.74rem;color:var(--cream);line-height:1.5;display:flex;gap:9px;align-items:flex-start}
+.tier-evt-perk span{color:var(--gold);font-size:.45rem;margin-top:4px;flex-shrink:0}
+@media(max-width:1150px){.tier-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:900px){.tier-grid{grid-template-columns:1fr}.dtt-banner-imgs img{height:210px}.dtt-brand{font-size:2.1rem}}
 
 /* ── CONTACT ── */
 #contact{background:var(--dark);display:grid;grid-template-columns:1fr 1fr;gap:90px;align-items:start}
@@ -505,42 +527,72 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
 <!-- EVENTS -->
 <section id="events">
   <div class="fi">
-    <span class="lbl">Upcoming Events</span>
+    <span class="lbl">Upcoming Event</span>
     <h2 class="h2">At the Lounge</h2>
   </div>
-  <div style="text-align:center;margin-top:32px">
-    <div class="evt-date" style="font-size:2.2rem">Thursday, April 30th &nbsp;·&nbsp; 5:00 PM – 8:00 PM</div>
-    <div class="evt-loc" style="margin-top:8px;font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.25em;text-transform:uppercase;color:var(--muted)">📍 Both Locations</div>
+
+  <div class="dtt-banner fi">
+    <div class="dtt-banner-imgs">
+      <img src="./event-photos/20190315_150514.jpg" alt="Dunbarton Sin Compromiso cigars">
+      <img src="./event-photos/20220120_125052.jpg" alt="Dunbarton Red Meat Lovers cigar">
+    </div>
+    <div class="dtt-banner-overlay">
+      <div class="dtt-brand">Dunbarton Tobacco &amp; Trust</div>
+      <div class="dtt-sub">An Evening with Steve Saka&rsquo;s Finest</div>
+      <div class="dtt-date">Thursday, June 25th &nbsp;·&nbsp; 5:00 PM – 8:00 PM</div>
+    </div>
   </div>
-  <div class="evt-grid fi" style="transition-delay:.12s">
 
-    <div class="evt-card">
-      <img class="evt-img" src="./Event Photos/RYJ-Reserve-Real-Profundo-09-CIGAR-Box.jpg" alt="Romeo y Julieta Featured Cigars">
-      <div class="evt-body">
-        <h3 class="evt-title" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;margin-bottom:6px">Romeo y Julieta Night</h3>
-        <p class="evt-desc">Join us for an exclusive evening celebrating the Romeo y Julieta brand. We’ll be featuring three exceptional smokes: the bold new Romeo y Julieta Profundo, the classic RyJ Reserva Real, and the limited RyJ Reserva Real Midnight Twist.</p>
+  <div class="tier-grid fi" style="transition-delay:.12s">
+
+    <div class="tier-evt">
+      <img class="tier-evt-img" src="./event-photos/20220120_125052.jpg" alt="Free Umbagog cigar">
+      <div class="tier-evt-body">
+        <div class="tier-evt-no">Tier 1</div>
+        <div class="tier-evt-spend">Spend $100</div>
+        <div class="tier-evt-rule"></div>
+        <div class="tier-evt-perks">
+          <div class="tier-evt-perk"><span>✦</span>1 Free Umbagog Cigar</div>
+        </div>
       </div>
     </div>
 
-    <div class="evt-card">
-      <img class="evt-img" src="./Event Photos/Screenshot 2026-04-14 104050.png" alt="H. Upmann Sunrise and Montecristo">
-      <div class="evt-body">
-        <h3 class="evt-title" style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;margin-bottom:6px">Also Featuring</h3>
-        <p class="evt-desc">The night also showcases the brand-new H. Upmann Sunrise — one of the most anticipated new releases of the year — plus a curated selection of Montecristo offerings. Two legendary brands under one roof.</p>
+    <div class="tier-evt">
+      <img class="tier-evt-img" src="./event-photos/DTT%20SKA%20KAHN%20Statue.jpeg" alt="Saka Kahn Statue">
+      <div class="tier-evt-body">
+        <div class="tier-evt-no">Tier 2</div>
+        <div class="tier-evt-spend">Spend $200</div>
+        <div class="tier-evt-rule"></div>
+        <div class="tier-evt-perks">
+          <div class="tier-evt-perk"><span>✦</span>2 Free Umbagog Cigars</div>
+          <div class="tier-evt-perk"><span>✦</span>Saka Kahn Statue</div>
+        </div>
       </div>
     </div>
 
-    <div class="evt-card">
-      <img class="evt-img" src="./Event Photos/Screenshot 2026-04-14 103754.png" alt="Giveaways and Raffle Prizes">
-      <div class="evt-body">
-        <h3 class="evt-title" style="font-family:’Cormorant Garamond’,serif;font-size:1.2rem;margin-bottom:6px">Buy-In Tiers &amp; Raffle</h3>
-        <ul style="list-style:none;display:flex;flex-direction:column;gap:7px;margin:0 0 12px 0;padding:0">
-          <li style="font-size:.72rem;color:var(--muted);line-height:1.5;display:flex;gap:8px;align-items:flex-start"><span style="color:var(--gold);font-size:.45rem;margin-top:3px;flex-shrink:0">✦</span>Buy 5 cigars, get 1 FREE</li>
-          <li style="font-size:.72rem;color:var(--muted);line-height:1.5;display:flex;gap:8px;align-items:flex-start"><span style="color:var(--gold);font-size:.45rem;margin-top:3px;flex-shrink:0">✦</span>Buy 10 cigars, get 3 FREE + Sling Bag</li>
-          <li style="font-size:.72rem;color:var(--muted);line-height:1.5;display:flex;gap:8px;align-items:flex-start"><span style="color:var(--gold);font-size:.45rem;margin-top:3px;flex-shrink:0">✦</span>Buy 20 cigars, get 4 FREE + 10% off + Lighter + Travel Humidor</li>
-        </ul>
-        <p style="font-size:.6rem;color:rgba(245,237,214,.5);line-height:1.5;margin-bottom:8px;font-style:italic">Applies to featured event cigars only: Romeo y Julieta, H. Upmann, and Montecristo.</p>
-        <p class="evt-desc" style="margin-bottom:0">Plus: stick around for the premium ashtray raffle!</p>
+    <div class="tier-evt">
+      <img class="tier-evt-img" src="./event-photos/DTT%20MUG.jpeg" alt="DTT Mug or Beanie">
+      <div class="tier-evt-body">
+        <div class="tier-evt-no">Tier 3</div>
+        <div class="tier-evt-spend">Spend $300</div>
+        <div class="tier-evt-rule"></div>
+        <div class="tier-evt-perks">
+          <div class="tier-evt-perk"><span>✦</span>3 Free Umbagog Cigars</div>
+          <div class="tier-evt-perk"><span>✦</span>DTT Mug or Beanie</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tier-evt">
+      <img class="tier-evt-img" src="./event-photos/DTT%20Hat.jpeg" alt="DTT Hat">
+      <div class="tier-evt-body">
+        <div class="tier-evt-no">Tier 4</div>
+        <div class="tier-evt-spend">Spend $400</div>
+        <div class="tier-evt-rule"></div>
+        <div class="tier-evt-perks">
+          <div class="tier-evt-perk"><span>✦</span>5 Free Umbagog Cigars</div>
+          <div class="tier-evt-perk"><span>✦</span>DTT Hat</div>
+        </div>
       </div>
     </div>
 
