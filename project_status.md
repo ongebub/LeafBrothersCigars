@@ -1,5 +1,5 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-05-21 (Session 6)
+**Last updated:** 2026-06-24 (Session 7)
 
 ---
 
@@ -49,6 +49,16 @@ The end-to-end membership flow is **live in production**:
    - Event images copied to `assets/` directory for clean referencing
    - `/menu` rewrite added to `vercel.json`
    - Font sizes doubled across all slides for Fire Stick legibility at 40" viewing distance
+
+---
+
+## Session 7 Updates (2026-06-24)
+
+1. **Dunbarton (DTT) event photos** — Added three photos to `event-photos/` for the Dunbarton Tobacco & Trust event:
+   - `DTT_MUG.jpg` — DTT mug photo
+   - `DTT_SKA_KAHN_STATUE.jpg` — Ska Kahn statue photo
+   - `20260106_173115.jpg` — Event photo
+   - All accessible at `https://www.leafbrotherscigars.com/event-photos/<filename>` after deploy.
 
 ---
 
