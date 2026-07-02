@@ -1,5 +1,5 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-06-24 (Session 7)
+**Last updated:** 2026-07-02 (Session 9)
 
 ---
 
@@ -17,6 +17,26 @@ The end-to-end membership flow is **live in production**:
 8. User redirected to `/?welcome=1` → welcome toast + login modal opens
 9. Member logs in via Supabase Auth → redirected to `/member` portal
 10. Member record visible in admin dashboard at `/admin` (Supabase Auth, admin-only)
+
+---
+
+## Session 9 Updates (2026-07-02)
+
+1. **Per-location Square routing** — Waukee and Ankeny are separate Square merchant accounts. Signups now route to the correct account based on the member's home location selection:
+   - **`api/_squareAccounts.js`** — Shared config: account map (token env var, webhook secret env var, webhook URL, location ID, plan variation IDs per tier), tier prices, `resolveAccount()` normalizer, `getClient()` builder, and `PLAN_VARIATION_LOOKUP` reverse map.
+   - **`api/checkout.js`** — Reads `home_location`, resolves to account, builds Square client + uses that account's `locationId` and plan variation IDs. No more unsuffixed env vars.
+   - **`api/webhook.js`** — Thin wrapper calling shared handler with `'ankeny'`.
+   - **`api/webhook-waukee.js`** — New endpoint calling shared handler with `'waukee'`.
+   - **`api/_webhookHandler.js`** — Shared webhook logic: signature verification per account, status normalization, activate/update/cancel with `[webhook:ankeny]`/`[webhook:waukee]` log prefixes.
+   - **`api/cancel.js`** — Looks up member's `home_location` from Supabase to route cancellation to the correct Square account.
+   - **Location picker** — Now shown for ALL five tiers (was hidden for Select/Lounge Premium). "Both" option removed. Required for signup.
+
+2. **Status normalization** — Canonical vocabulary: `active`, `cancelled`, `suspended`.
+   - Square `ACTIVE`/`PENDING` → `active`
+   - Square `CANCELED`/`DEACTIVATED` → `cancelled`
+   - Square `PAUSED` → `suspended`
+   - Removed `subscription.deleted` handler (Square no longer fires it).
+   - Fixes prior inconsistency where cancelled could be spelled two ways.
 
 ---
 
@@ -91,8 +111,8 @@ The end-to-end membership flow is **live in production**:
    - **Testing note**: End-to-end cancel flow (admin cancel → Square webhook → Supabase status update) should be tested by Chris against a test subscription. The `subscription.deleted` webhook path has been implemented but not fully tested in production.
 
 2. **Home location feature** — Added `home_location` to the full membership flow:
-   - **Signup form** — Location selector conditionally shown based on tier. Hidden and auto-set to 'Both' for Select and Lounge Premium. Required Ankeny/Waukee choice for Lounge, Half Locker, and Locker tiers.
-   - **Checkout API** — Validates `home_location` is one of `Ankeny`, `Waukee`, `Both`. Stores in Square customer `note` field as `home_location:Ankeny` (referenceId untouched — POS guard safe).
+   - **Signup form** — Location selector shown for all tiers. Required Ankeny/Waukee choice (no "Both" option). *(Updated in Session 9: was hidden for Select/Lounge Premium.)*
+   - **Checkout API** — Resolves `home_location` to account key via `resolveAccount()`. Routes to correct Square merchant. Stores in customer `note` field as `home_location:Ankeny`. *(Updated in Session 9: per-location routing.)*
    - **Webhook** — New `parseHomeLocation()` reads customer note on member creation, writes to `home_location` column. Invalid/missing values → `null` + warning log.
    - **Admin dashboard** — Editable `Home Location` dropdown (Ankeny, Waukee, Both) in add/edit modal. Table display handles all three values with styled badges (green for Both).
 
@@ -138,10 +158,13 @@ The end-to-end membership flow is **live in production**:
 
 ## Critical Technical Details
 
-### Current Architecture
-- **`api/checkout.js`** — Searches/creates Square customer, creates payment link. Stores `home_location` in customer note field. No Supabase interaction.
-- **`api/webhook.js`** — Handles all Square events. Creates member row in Supabase on first confirmed payment. Reads `home_location` from customer note field. Guards all handlers with `referenceId` check.
-- **`api/cancel.js`** — Validates Supabase JWT, cancels Square subscription
+### Current Architecture (Per-Location Routing)
+- **`api/_squareAccounts.js`** — Shared config: `ACCOUNTS` map (waukee/ankeny), `TIER_PRICES`, `resolveAccount()`, `getClient()`, `PLAN_VARIATION_LOOKUP`
+- **`api/checkout.js`** — Resolves account from `home_location`, builds per-account Square client, uses account-specific `locationId` + plan variation IDs. No Supabase interaction.
+- **`api/_webhookHandler.js`** — Shared webhook logic: per-account signature verification, status normalization (`active`/`cancelled`/`suspended`), member activation/update
+- **`api/webhook.js`** — Ankeny webhook endpoint → calls shared handler with `'ankeny'`
+- **`api/webhook-waukee.js`** — Waukee webhook endpoint → calls shared handler with `'waukee'`
+- **`api/cancel.js`** — Validates Supabase JWT, looks up member's `home_location` to route cancellation to correct Square account
 - **`member.html`** — Member portal (Supabase Auth protected)
 - **`admin.html`** — Admin dashboard (Supabase Auth, `ongebub@gmail.com` only)
 - **`index.html`** — Main site with signup modal, login modal, contact form
@@ -157,8 +180,9 @@ The end-to-end membership flow is **live in production**:
 - Vercel `/api` folder is CommonJS — no `import`/`export`
 
 ### Plan Variation IDs (Production) — USE THESE
-These are `SUBSCRIPTION_PLAN_VARIATION` IDs for `checkoutOptions.subscriptionPlanId`:
+All IDs are defined in `api/_squareAccounts.js`. Two separate Square merchant accounts:
 
+**Ankeny** (location `KGBZ7RVNAWRT8`):
 | Tier | Variation ID | Price |
 |------|-------------|-------|
 | select | WXS3UVFGTJ7Z5TOYUSMGX2GE | $15/mo |
@@ -167,16 +191,32 @@ These are `SUBSCRIPTION_PLAN_VARIATION` IDs for `checkoutOptions.subscriptionPla
 | half-locker | O3R7YN4EPFTZXIXJKAHKJUEC | $59/mo |
 | locker | H2ELZFYJ35ZOYRQ5BGD36LVL | $69/mo |
 
-**DO NOT use parent plan IDs** (QAKPMT2OPQMEJ23DPA452PVJ etc.) — Square rejects with "incorrect object type SUBSCRIPTION_PLAN".
+**Waukee** (location `X3YPTX6YD3SHQ`):
+| Tier | Variation ID | Price |
+|------|-------------|-------|
+| select | 4OM6XF4B2GEX73NJRRYK4TOF | $15/mo |
+| lounge | 5JNUPOX5C2QIZASZLZS5TMJV | $39/mo |
+| lounge-premium | MMORG7OT4SLP66LB4OBGISJS | $49/mo |
+| half-locker | JHT6K3V2ADVVP2LXZJRCUYN6 | $59/mo |
+| locker | WCL23Y6XZ4V5MOCSKHNKJACF | $69/mo |
 
-### Environment Variables (Vercel — all configured)
-- `SQUARE_ACCESS_TOKEN` — Square production API token
-- `SQUARE_LOCATION_ID` — `KGBZ7RVNAWRT8`
-- `SQUARE_WEBHOOK_SECRET` — Webhook signature key
-- `SQUARE_WEBHOOK_URL` — `https://www.leafbrotherscigars.com/api/webhook`
+**DO NOT use parent plan IDs** — Square rejects with "incorrect object type SUBSCRIPTION_PLAN".
+
+### Environment Variables (Vercel)
+- `SQUARE_ACCESS_TOKEN_WAUKEE` — Waukee Square merchant API token
+- `SQUARE_ACCESS_TOKEN_ANKENY` — Ankeny Square merchant API token
+- `SQUARE_WEBHOOK_SECRET_WAUKEE` — Waukee webhook signature key
+- `SQUARE_WEBHOOK_SECRET_ANKENY` — Ankeny webhook signature key
 - `SUPABASE_URL` — Supabase project URL
 - `SUPABASE_SERVICE_KEY` — Supabase service role key
 - `NEXT_PUBLIC_SITE_URL` — `https://www.leafbrotherscigars.com`
+
+Webhook URLs (hardcoded in `_squareAccounts.js`, must match Square Dashboard):
+- Ankeny: `https://www.leafbrotherscigars.com/api/webhook`
+- Waukee: `https://www.leafbrotherscigars.com/api/webhook-waukee`
+
+**Retired** (no longer referenced by code — can be removed from Vercel):
+- `SQUARE_ACCESS_TOKEN`, `SQUARE_LOCATION_ID`, `SQUARE_WEBHOOK_SECRET`, `SQUARE_WEBHOOK_URL`
 
 ### Supabase `members` Table
 Columns: `name, email, phone, tier, home_location, status, join_date, square_customer_id, square_subscription_id, renewal_date, locker_number, terms_agreed_at`
@@ -185,13 +225,16 @@ Columns: `name, email, phone, tier, home_location, status, join_date, square_cus
 - `terms_agreed_at` added: `ALTER TABLE members ADD COLUMN terms_agreed_at timestamptz;`
 - **RLS enabled** — anon blocked, service role bypasses, admin (`ongebub@gmail.com`) has full access
 
-### Square Webhook Events (Production — all configured)
+### Square Webhook Events (Two endpoints — one per account)
+- **Ankeny**: `POST /api/webhook` → `_webhookHandler('ankeny')`
+- **Waukee**: `POST /api/webhook-waukee` → `_webhookHandler('waukee')`
+
 All handlers check `referenceId` on the Square customer before acting:
-- `payment.created` — logged but no action
 - `payment.updated` / `payment.completed` — creates or activates member if `COMPLETED` + has `referenceId`
-- `subscription.created` — creates or activates member (checks `PLAN_TO_TIER` map or `referenceId`)
-- `subscription.updated` — updates status + renewal_date in Supabase
-- `subscription.deleted` — sets status to `cancelled` in Supabase
+- `subscription.created` — creates or activates member (checks `PLAN_VARIATION_LOOKUP` or `referenceId`)
+- `subscription.updated` — normalizes status (`ACTIVE`/`PENDING`→`active`, `CANCELED`/`DEACTIVATED`→`cancelled`, `PAUSED`→`suspended`) + updates `renewal_date`
+
+**Status vocabulary**: `active`, `cancelled`, `suspended` — matches admin dashboard CSS/filters.
 
 ### Square Loyalty Program
 - Leaf Brothers has an active loyalty program in Square

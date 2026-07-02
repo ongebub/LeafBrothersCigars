@@ -1,16 +1,4 @@
-const { SquareClient, SquareEnvironment } = require('square');
-const client = new SquareClient({
-  token: process.env.SQUARE_ACCESS_TOKEN,
-  environment: SquareEnvironment.Production,
-});
-
-const PLANS = {
-  'select':          { name: 'Select Member',          amount: 1500, planId: 'WXS3UVFGTJ7Z5TOYUSMGX2GE' },
-  'lounge':          { name: 'Lounge Member',           amount: 3900, planId: 'TS5DUW65745CEVANPELUKWBY' },
-  'lounge-premium':  { name: 'Lounge Member Premium',   amount: 4900, planId: '6YKSAN7WUNPA37ZQZEO7T5NJ' },
-  'half-locker':     { name: 'Half Locker Member',      amount: 5900, planId: 'O3R7YN4EPFTZXIXJKAHKJUEC' },
-  'locker':          { name: 'Locker Member',           amount: 6900, planId: 'H2ELZFYJ35ZOYRQ5BGD36LVL' },
-};
+const { ACCOUNTS, TIER_PRICES, resolveAccount, getClient } = require('./_squareAccounts');
 
 // Format phone to E.164 (+15155550100). Returns null if invalid.
 function formatPhone(raw) {
@@ -25,16 +13,37 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { tier, name, email, phone, home_location } = req.body;
-  const plan = PLANS[tier];
-  if (!plan) return res.status(400).json({ error: 'Invalid tier' });
 
-  const VALID_LOCATIONS = ['Ankeny', 'Waukee', 'Both'];
-  if (!home_location || !VALID_LOCATIONS.includes(home_location)) {
-    return res.status(400).json({ error: 'Invalid home_location' });
+  // Validate tier
+  const tierInfo = TIER_PRICES[tier];
+  if (!tierInfo) return res.status(400).json({ error: 'Invalid tier' });
+
+  // Resolve account from home_location
+  let accountKey;
+  try {
+    accountKey = resolveAccount(home_location);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+
+  const account = ACCOUNTS[accountKey];
+  const planVariationId = account.plans[tier];
+  if (!planVariationId) {
+    return res.status(400).json({ error: `Tier "${tier}" not available at ${account.label}` });
+  }
+
+  // Build Square client for the selected location's account
+  let client;
+  try {
+    client = getClient(accountKey);
+  } catch (err) {
+    console.error('[checkout] Client init error:', err.message);
+    return res.status(500).json({ error: 'Server configuration error' });
   }
 
   const e164Phone = formatPhone(phone);
   console.log('[checkout] Phone input:', phone, '→ e164:', e164Phone);
+  console.log('[checkout] Account:', accountKey, 'location:', account.locationId, 'plan:', planVariationId);
 
   try {
     // 1. Find existing customer by email, or create a new one
@@ -47,7 +56,6 @@ module.exports = async function handler(req, res) {
     if (existing) {
       customerId = existing.id;
       console.log('[checkout] Found existing customer:', customerId, 'email:', email);
-      // Update referenceId to current tier if not already set, and store home_location in note
       const updates = { customerId, note: `home_location:${home_location}` };
       if (!existing.referenceId) updates.referenceId = tier;
       await client.customers.update(updates);
@@ -67,22 +75,19 @@ module.exports = async function handler(req, res) {
       console.log('[checkout] Customer created:', customerId, 'tier:', tier);
     }
 
-    // 2. Create a subscription checkout payment link.
-    //    Square's Subscription Plan Checkout handles everything:
-    //    collects card details, creates the subscription, and starts
-    //    recurring billing — no separate order or webhook flow needed.
+    // 2. Create a subscription checkout payment link
     const linkRequest = {
       idempotencyKey: `${customerId}-${tier}-${Date.now()}`,
       quickPay: {
-        name: `${plan.name} — First Month`,
+        name: `${tierInfo.name} — First Month`,
         priceMoney: {
-          amount: BigInt(plan.amount),
+          amount: BigInt(tierInfo.amount),
           currency: 'USD',
         },
-        locationId: process.env.SQUARE_LOCATION_ID,
+        locationId: account.locationId,
       },
       checkoutOptions: {
-        subscriptionPlanId: plan.planId,
+        subscriptionPlanId: planVariationId,
         redirectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/?welcome=1`,
         acceptedPaymentMethods: {
           applePay: true,
@@ -112,7 +117,6 @@ module.exports = async function handler(req, res) {
     const squareErrors = err.body?.errors || err.errors || [];
     const statusCode = err.statusCode || 500;
 
-    // Parse field-level errors from Square response
     const fieldErrors = {};
     let detail = err.message || 'Checkout failed';
     for (const e of squareErrors) {

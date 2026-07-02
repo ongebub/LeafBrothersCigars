@@ -1,10 +1,5 @@
-const { SquareClient, SquareEnvironment } = require('square');
 const { createClient } = require('@supabase/supabase-js');
-
-const client = new SquareClient({
-  token: process.env.SQUARE_ACCESS_TOKEN,
-  environment: SquareEnvironment.Production,
-});
+const { resolveAccount, getClient } = require('./_squareAccounts');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -35,23 +30,43 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'subscriptionId is required' });
   }
 
-  // Non-admin users can only cancel their own subscription
-  if (!isAdmin) {
-    const { data: member, error: lookupErr } = await supabase
-      .from('members')
-      .select('square_subscription_id')
-      .eq('email', userEmail)
-      .eq('square_subscription_id', subscriptionId)
-      .maybeSingle();
+  // Look up the member to get home_location for routing + ownership check
+  const { data: member, error: lookupErr } = await supabase
+    .from('members')
+    .select('home_location, square_subscription_id, email')
+    .eq('square_subscription_id', subscriptionId)
+    .maybeSingle();
 
-    if (lookupErr || !member) {
-      console.log('[cancel] Non-admin user', userEmail, 'attempted to cancel subscription', subscriptionId, '— denied');
-      return res.status(403).json({ error: 'You can only cancel your own subscription' });
-    }
+  if (lookupErr || !member) {
+    console.log('[cancel] Subscription not found in members table:', subscriptionId);
+    return res.status(404).json({ error: 'Subscription not found' });
+  }
+
+  // Non-admin users can only cancel their own subscription
+  if (!isAdmin && member.email !== userEmail) {
+    console.log('[cancel] Non-admin user', userEmail, 'attempted to cancel subscription', subscriptionId, '— denied');
+    return res.status(403).json({ error: 'You can only cancel your own subscription' });
+  }
+
+  // Route to the correct Square account
+  let accountKey;
+  try {
+    accountKey = resolveAccount(member.home_location);
+  } catch (err) {
+    console.error('[cancel] Could not resolve account for home_location:', member.home_location);
+    return res.status(500).json({ error: 'Could not determine Square account for this member' });
+  }
+
+  let client;
+  try {
+    client = getClient(accountKey);
+  } catch (err) {
+    console.error('[cancel] Client init error:', err.message);
+    return res.status(500).json({ error: 'Server configuration error' });
   }
 
   try {
-    console.log('[cancel] Cancelling subscription:', subscriptionId, 'by:', userEmail, isAdmin ? '(admin)' : '(member)');
+    console.log('[cancel] Cancelling subscription:', subscriptionId, 'account:', accountKey, 'by:', userEmail, isAdmin ? '(admin)' : '(member)');
     await client.subscriptions.cancel({ subscriptionId });
     return res.status(200).json({ success: true });
   } catch (err) {
