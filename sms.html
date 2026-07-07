@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Text Alerts — Leaf Brothers Cigars</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9A84C;--gold-lt:#E8C97A;--gold-dk:#8B6914;
+  --cream:#F5EDD6;--dark:#0D0A06;--dark2:#161108;
+  --dark3:#201A0E;--dark4:#2A2214;--muted:#8A7A65;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--dark);color:var(--cream);font-family:'Raleway',sans-serif;font-weight:300;overflow-x:hidden}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--dark)}
+::-webkit-scrollbar-thumb{background:var(--gold-dk)}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:16px 56px;background:rgba(13,10,6,.97);border-bottom:1px solid rgba(201,168,76,.18);backdrop-filter:blur(14px);transition:all .4s}
+.nav-logo-wrap{height:36px;display:flex;align-items:center}
+.nav-logo-wrap img{height:36px;width:auto;mix-blend-mode:screen;display:block}
+.nav-links{display:flex;gap:30px;list-style:none;align-items:center}
+.nav-links a{font-family:'Raleway',sans-serif;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(245,237,214,.72);text-decoration:none;transition:color .3s}
+.nav-links a:hover{color:var(--gold)}
+.nav-cta{display:inline-block;font-family:'Cinzel',serif!important;font-size:.58rem!important;font-weight:600;letter-spacing:.14em;border:1px solid var(--gold)!important;color:var(--gold)!important;padding:8px 22px;line-height:1;white-space:nowrap;transition:all .3s!important}
+.nav-cta:hover{background:var(--gold)!important;color:var(--dark)!important}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;z-index:1001}
+.hamburger span{display:block;width:24px;height:1px;background:var(--gold);transition:all .3s}
+
+/* MAIN */
+.sms-page{max-width:620px;margin:0 auto;padding:140px 32px 80px}
+.sms-eyebrow{font-family:'Cinzel',serif;font-size:.54rem;letter-spacing:.45em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;display:block}
+.sms-heading{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,4.5vw,3.2rem);font-weight:300;line-height:1.1;margin-bottom:6px}
+.sms-subhead{font-family:'Cormorant Garamond',serif;font-size:1.15rem;font-style:italic;color:rgba(245,237,214,.55);margin-bottom:8px}
+.gold-bar{width:36px;height:1px;background:var(--gold);margin:20px 0}
+
+/* FORM */
+.sms-form{display:flex;flex-direction:column;gap:20px}
+.f-group{display:flex;flex-direction:column;gap:6px}
+.f-lbl{font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.25em;text-transform:uppercase;color:var(--muted)}
+.f-input,.f-select{background:var(--dark2);border:1px solid rgba(201,168,76,.18);color:var(--cream);padding:12px 16px;font-family:'Raleway',sans-serif;font-size:.85rem;font-weight:300;outline:none;transition:border-color .3s;-webkit-appearance:none;appearance:none;border-radius:0}
+.f-input:focus,.f-select:focus{border-color:var(--gold)}
+.f-select{cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23C9A84C' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+.f-select option{background:var(--dark2);color:var(--cream)}
+
+/* CONSENT CHECKBOX */
+.consent-wrap{display:flex;gap:12px;align-items:flex-start}
+.consent-wrap input[type="checkbox"]{width:18px;height:18px;margin-top:2px;accent-color:var(--gold);flex-shrink:0;cursor:pointer}
+.consent-text{font-size:.76rem;line-height:1.65;color:rgba(245,237,214,.63)}
+
+/* SUBMIT */
+.btn-gold{background:var(--gold);color:var(--dark);border:none;padding:14px 42px;font-family:'Cinzel',serif;font-size:.65rem;letter-spacing:.22em;text-transform:uppercase;font-weight:600;cursor:pointer;text-decoration:none;display:inline-block;transition:all .3s;width:100%;text-align:center}
+.btn-gold:hover{background:var(--gold-lt);transform:translateY(-2px)}
+.btn-gold:disabled{opacity:.45;cursor:not-allowed;transform:none}
+
+/* DISCLAIMER */
+.disclaimer{font-size:.68rem;line-height:1.7;color:var(--muted);margin-top:8px}
+
+/* SUCCESS / ERROR */
+.sms-success{display:none;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.25);padding:28px 24px;text-align:center;margin-top:24px}
+.sms-success h3{font-family:'Cinzel',serif;font-size:.9rem;letter-spacing:.12em;color:var(--gold);margin-bottom:8px}
+.sms-success p{font-size:.85rem;color:rgba(245,237,214,.7);line-height:1.7}
+.sms-error{display:none;font-size:.78rem;color:#c0694a;margin-top:4px}
+
+/* TERMS SECTION */
+.sms-terms{margin-top:64px;padding-top:40px;border-top:1px solid rgba(201,168,76,.12)}
+.sms-terms h3{font-family:'Cinzel',serif;font-size:.78rem;letter-spacing:.18em;text-transform:uppercase;color:var(--gold);margin-bottom:18px}
+.sms-terms p,.sms-terms ul{font-size:.78rem;line-height:1.85;color:rgba(245,237,214,.55);margin-bottom:12px}
+.sms-terms ul{list-style:none;padding-left:0}
+.sms-terms ul li{padding-left:18px;position:relative}
+.sms-terms ul li::before{content:'';width:5px;height:1px;background:var(--gold);position:absolute;left:0;top:10px}
+
+/* FOOTER */
+footer{background:var(--dark2);padding:60px;display:grid;grid-template-columns:1fr 1fr;gap:60px;border-top:1px solid rgba(201,168,76,.08)}
+.ft-logo-wrap{margin-bottom:14px;display:inline-block}
+.ft-logo-wrap img{width:72px;height:auto;display:block;mix-blend-mode:screen}
+.ft-copy{font-size:.62rem;color:var(--muted);font-family:'Cinzel',serif;letter-spacing:.08em}
+.ft-addr{font-size:.68rem;color:var(--muted);margin-top:12px;line-height:1.7}
+.ft-ct{font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:16px}
+.ft-links{list-style:none;display:flex;flex-direction:column;gap:9px}
+.ft-links a{font-size:.75rem;color:var(--muted);text-decoration:none;transition:color .2s;cursor:pointer;font-family:'Raleway',sans-serif}
+.ft-links a:hover{color:var(--gold)}
+
+/* MOBILE */
+@media(max-width:768px){
+  nav{padding:14px 20px}
+  .nav-links{display:none}
+  .nav-links.open{display:flex;flex-direction:column;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(13,10,6,.98);align-items:center;justify-content:center;gap:26px;z-index:999}
+  .nav-links.open a{font-size:1rem}
+  .nav-links.open .nav-cta{font-size:.7rem!important;padding:12px 32px;margin-top:8px}
+  .hamburger{display:flex}
+  .sms-page{padding:110px 20px 60px}
+  footer{grid-template-columns:1fr;padding:40px 20px;gap:32px}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo-wrap">
+    <a href="/"><img src="/favicon.png" alt="Leaf Brothers Cigars"></a>
+  </div>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="/#locations">Locations</a></li>
+    <li><a href="/#membership">Membership</a></li>
+    <li><a href="/#events">Events</a></li>
+    <li><a href="/#contact">Contact</a></li>
+    <li><a href="/sms" style="color:var(--gold)">Text Alerts</a></li>
+  </ul>
+  <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="sms-page">
+  <span class="sms-eyebrow">Stay Connected</span>
+  <h1 class="sms-heading">Text Alerts</h1>
+  <p class="sms-subhead">Events & Exclusive Sales</p>
+  <div class="gold-bar"></div>
+
+  <!-- FORM -->
+  <form class="sms-form" id="smsForm" onsubmit="return submitSms(event)">
+    <div class="f-group">
+      <label class="f-lbl" for="smsName">First Name</label>
+      <input class="f-input" type="text" id="smsName" placeholder="First name (optional)">
+    </div>
+    <div class="f-group">
+      <label class="f-lbl" for="smsPhone">Phone Number</label>
+      <input class="f-input" type="tel" id="smsPhone" placeholder="(515) 555-0100" required>
+    </div>
+    <div class="f-group">
+      <label class="f-lbl" for="smsLocation">Preferred Location</label>
+      <select class="f-select" id="smsLocation" required>
+        <option value="" disabled selected>Choose a location</option>
+        <option value="Waukee">Waukee</option>
+        <option value="Ankeny">Ankeny</option>
+        <option value="Both">Both</option>
+      </select>
+    </div>
+    <div class="consent-wrap">
+      <input type="checkbox" id="smsConsent" required>
+      <label class="consent-text" for="smsConsent">
+        I agree to receive recurring automated marketing text messages (event announcements and sales) from Leaf Brothers Cigars at the number provided. Consent is not a condition of any purchase. Message frequency may vary. Message and data rates may apply. Reply STOP to cancel, HELP for help.
+      </label>
+    </div>
+    <button type="submit" class="btn-gold" id="smsSubmitBtn">Sign Up for Text Alerts</button>
+    <div class="sms-error" id="smsError"></div>
+  </form>
+
+  <!-- DISCLAIMER -->
+  <p class="disclaimer">
+    Message frequency may vary. Standard message and data rates may apply. Reply STOP to opt out. Reply HELP for assistance. Your mobile information will not be sold or shared with third parties for promotional or marketing purposes.
+  </p>
+
+  <!-- SUCCESS STATE -->
+  <div class="sms-success" id="smsSuccess">
+    <h3>You're Signed Up</h3>
+    <p>Watch for a confirmation text. You can reply STOP at any time to opt out.</p>
+  </div>
+
+  <!-- SMS TERMS & PRIVACY -->
+  <div class="sms-terms" id="sms-terms">
+    <h3>SMS Terms & Privacy</h3>
+    <p><strong>Program Name:</strong> Leaf Brothers Cigars Alerts</p>
+    <p><strong>Purpose:</strong> You will receive recurring automated marketing text messages including event announcements and exclusive sale notifications from Leaf Brothers Cigars.</p>
+    <ul>
+      <li>Message frequency may vary.</li>
+      <li>Message and data rates may apply.</li>
+      <li>Reply <strong>STOP</strong> at any time to opt out of text messages.</li>
+      <li>Reply <strong>HELP</strong> for assistance or contact us at <a href="mailto:Ankeny@leafbrotherscigars.com" style="color:var(--gold)">Ankeny@leafbrotherscigars.com</a>.</li>
+      <li>Consent is not required as a condition of any purchase.</li>
+      <li>Your mobile opt-in data and consent information will <strong>NOT</strong> be sold or shared with third parties for promotional or marketing purposes.</li>
+    </ul>
+    <p>Participating carriers are not liable for delayed or undelivered messages. By opting in, you acknowledge that you are the owner or authorized user of the mobile device and number provided.</p>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="ft-logo-wrap"><a href="/"><img src="/favicon.png" alt="Leaf Brothers Cigars"></a></div>
+    <p class="ft-copy">&copy; 2024 Leaf Brothers Cigars. All rights reserved.</p>
+    <p class="ft-addr">Ankeny & Waukee, Iowa &nbsp;&middot;&nbsp; Est. 2018</p>
+  </div>
+  <div>
+    <span class="ft-ct">Navigate</span>
+    <ul class="ft-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/#locations">Locations</a></li>
+      <li><a href="/#membership">Membership</a></li>
+      <li><a href="/#events">Events</a></li>
+      <li><a href="/#contact">Contact</a></li>
+      <li><a href="/sms">Text Alerts</a></li>
+    </ul>
+  </div>
+</footer>
+
+<script>
+// Hamburger toggle
+document.getElementById('hamburger').addEventListener('click', function() {
+  document.getElementById('navLinks').classList.toggle('open');
+});
+document.querySelectorAll('.nav-links a').forEach(function(a) {
+  a.addEventListener('click', function() {
+    document.getElementById('navLinks').classList.remove('open');
+  });
+});
+
+// Consent text (exact label text sent to backend)
+var CONSENT_TEXT = 'I agree to receive recurring automated marketing text messages (event announcements and sales) from Leaf Brothers Cigars at the number provided. Consent is not a condition of any purchase. Message frequency may vary. Message and data rates may apply. Reply STOP to cancel, HELP for help.';
+
+function submitSms(e) {
+  e.preventDefault();
+  var btn = document.getElementById('smsSubmitBtn');
+  var errorEl = document.getElementById('smsError');
+  errorEl.style.display = 'none';
+
+  var phone = document.getElementById('smsPhone').value.trim();
+  var name = document.getElementById('smsName').value.trim();
+  var location = document.getElementById('smsLocation').value;
+  var consent = document.getElementById('smsConsent').checked;
+
+  if (!phone) {
+    errorEl.textContent = 'Please enter your phone number.';
+    errorEl.style.display = 'block';
+    return false;
+  }
+  if (!location) {
+    errorEl.textContent = 'Please select a location.';
+    errorEl.style.display = 'block';
+    return false;
+  }
+  if (!consent) {
+    errorEl.textContent = 'You must agree to receive text messages to sign up.';
+    errorEl.style.display = 'block';
+    return false;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Signing up...';
+
+  fetch('/api/sms-signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      first_name: name || null,
+      phone: phone,
+      location: location,
+      consent: true,
+      consent_text: CONSENT_TEXT
+    })
+  })
+  .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })
+  .then(function(result) {
+    if (result.ok) {
+      document.getElementById('smsForm').style.display = 'none';
+      document.querySelector('.disclaimer').style.display = 'none';
+      document.getElementById('smsSuccess').style.display = 'block';
+    } else {
+      errorEl.textContent = result.data.error || 'Something went wrong. Please try again.';
+      errorEl.style.display = 'block';
+      btn.disabled = false;
+      btn.textContent = 'Sign Up for Text Alerts';
+    }
+  })
+  .catch(function() {
+    errorEl.textContent = 'Network error. Please check your connection and try again.';
+    errorEl.style.display = 'block';
+    btn.disabled = false;
+    btn.textContent = 'Sign Up for Text Alerts';
+  });
+
+  return false;
+}
+</script>
+</body>
+</html>

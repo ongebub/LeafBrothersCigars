@@ -1,5 +1,5 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-07-02 (Session 9)
+**Last updated:** 2026-07-07 (Session 10)
 
 ---
 
@@ -17,6 +17,38 @@ The end-to-end membership flow is **live in production**:
 8. User redirected to `/?welcome=1` → welcome toast + login modal opens
 9. Member logs in via Supabase Auth → redirected to `/member` portal
 10. Member record visible in admin dashboard at `/admin` (Supabase Auth, admin-only)
+
+---
+
+## Session 10 Updates (2026-07-07)
+
+1. **SMS opt-in page (`/sms`)** — New `sms.html` for collecting SMS marketing opt-ins with full TCPA/SHAFT-C compliance:
+   - Form: first name (optional), phone (required, tel input), location preference (Waukee/Ankeny/Both select), consent checkbox (not pre-checked, required)
+   - Consent checkbox label includes full disclosure: recurring automated marketing messages, not a condition of purchase, msg frequency varies, msg & data rates apply, STOP/HELP instructions
+   - Required disclaimer text displayed below form verbatim per carrier requirements
+   - Inline "SMS Terms & Privacy" section on same page covering program name, purpose, frequency, rates, STOP/HELP, and mobile data sharing prohibition
+   - JS fetch POST to `/api/sms-signup` — inline success state, button disable, error handling
+   - Matches site branding: Cinzel/Cormorant Garamond/Raleway fonts, gold/dark color scheme, responsive mobile layout
+   - `/sms` rewrite added to `vercel.json`
+
+2. **SMS signup API endpoint (`/api/sms-signup`)** — CommonJS serverless function matching existing API patterns:
+   - Accepts POST with `{ first_name, phone, location, consent, consent_text }`
+   - Reuses E.164 phone formatter from `checkout.js` (10-digit → `+1...`, 11-digit starting with 1 → `+1...`)
+   - Validates consent === true, phone normalization, location in allowed list
+   - Inserts into Supabase `sms_subscribers` table with full consent record: phone, location_preference, consent, consent_text, source='web_form', ip_address (x-forwarded-for), user_agent
+   - Handles unique phone conflict gracefully: returns `{ ok: true, already: true }` instead of error
+   - Logging with `[sms-signup]` prefix matching webhook convention
+   - Uses existing `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` env vars
+
+3. **Supabase `sms_subscribers` table** — Schema defined in `supabase/sms_subscribers.sql`:
+   - Columns: `id` (bigint identity PK), `first_name` (text), `phone` (text unique not null), `location_preference` (text), `consent` (boolean not null), `consent_text` (text), `source` (text default 'web_form'), `ip_address` (text), `user_agent` (text), `created_at` (timestamptz default now())
+   - Table must be created via Supabase dashboard (SQL file is for reference)
+
+4. **Home page CTA** — Added "Text Alerts" link in two places on `index.html`:
+   - Nav bar: new `<li>` before "Member Login" linking to `/sms`
+   - Hero buttons: third button (ghost style, gold text, smaller) linking to `/sms`
+
+5. **SMS sending NOT yet wired** — This is the collection front-end only. Actual message sending is pending 10DLC registration and SHAFT-C provider approval. No SMS provider SDK is integrated yet.
 
 ---
 
