@@ -1,5 +1,5 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-07-07 (Session 10)
+**Last updated:** 2026-07-10 (Session 10)
 
 ---
 
@@ -49,6 +49,19 @@ The end-to-end membership flow is **live in production**:
    - Hero buttons: third button (ghost style, gold text, smaller) linking to `/sms`
 
 5. **SMS sending NOT yet wired** — This is the collection front-end only. Actual message sending is pending 10DLC registration and SHAFT-C provider approval. No SMS provider SDK is integrated yet.
+
+6. **Privacy Policy page (`/privacy`)** — New `privacy.html` with full privacy policy covering:
+   - Information collection (account, payment via Square, communications, SMS opt-in, automatic/cookies)
+   - How information is used (account management, marketing, site operations, legal compliance)
+   - SMS/text messaging program privacy (mobile info NOT sold/shared with third parties — required for 10DLC registration)
+   - Cookies and analytics disclosure
+   - Information sharing (service providers only, legal/safety, business transfers)
+   - Data retention, security, user choices/rights, children's privacy
+   - Contact information for both locations
+   - Effective date: July 10, 2026
+   - `/privacy` rewrite added to `vercel.json`
+   - Footer "Privacy Policy" link on `index.html` wired to `/privacy` (was dead `#` link)
+   - `sms.html` SMS Terms section now links to `/privacy`
 
 ---
 

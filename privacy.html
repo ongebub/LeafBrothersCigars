@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Privacy Policy — Leaf Brothers Cigars</title>
+<meta name="description" content="Privacy Policy for Leaf Brothers Cigars LLC. Learn how we collect, use, and protect your personal information, including our SMS text messaging privacy practices.">
+<link rel="icon" type="image/png" href="/favicon.png">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Raleway:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9A84C;--gold-lt:#E8C97A;--gold-dk:#8B6914;
+  --cream:#F5EDD6;--dark:#0D0A06;--dark2:#161108;
+  --dark3:#201A0E;--dark4:#2A2214;--muted:#8A7A65;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--dark);color:var(--cream);font-family:'Raleway',sans-serif;font-weight:300;overflow-x:hidden}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--dark)}
+::-webkit-scrollbar-thumb{background:var(--gold-dk)}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;padding:16px 56px;background:rgba(13,10,6,.97);border-bottom:1px solid rgba(201,168,76,.18);backdrop-filter:blur(14px);transition:all .4s}
+.nav-logo-wrap{height:36px;display:flex;align-items:center}
+.nav-logo-wrap img{height:36px;width:auto;mix-blend-mode:screen;display:block}
+.nav-links{display:flex;gap:30px;list-style:none;align-items:center}
+.nav-links a{font-family:'Raleway',sans-serif;font-size:.62rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(245,237,214,.72);text-decoration:none;transition:color .3s}
+.nav-links a:hover{color:var(--gold)}
+.nav-cta{display:inline-block;font-family:'Cinzel',serif!important;font-size:.58rem!important;font-weight:600;letter-spacing:.14em;border:1px solid var(--gold)!important;color:var(--gold)!important;padding:8px 22px;line-height:1;white-space:nowrap;transition:all .3s!important}
+.nav-cta:hover{background:var(--gold)!important;color:var(--dark)!important}
+.hamburger{display:none;flex-direction:column;gap:5px;cursor:pointer;z-index:1001}
+.hamburger span{display:block;width:24px;height:1px;background:var(--gold);transition:all .3s}
+
+/* CONTENT */
+.privacy-page{max-width:800px;margin:0 auto;padding:140px 40px 80px}
+.privacy-eyebrow{font-family:'Cinzel',serif;font-size:.54rem;letter-spacing:.45em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;display:block}
+.privacy-page h1{font-family:'Cormorant Garamond',serif;font-size:clamp(2rem,4.5vw,3.2rem);font-weight:300;line-height:1.1;margin-bottom:6px}
+.gold-bar{width:36px;height:1px;background:var(--gold);margin:20px 0 32px}
+.privacy-meta{font-size:.82rem;color:var(--muted);line-height:1.7;margin-bottom:28px}
+.privacy-page h2{font-family:'Cinzel',serif;font-size:.88rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin:40px 0 14px;padding-top:16px;border-top:1px solid rgba(201,168,76,.1)}
+.privacy-page h2:first-of-type{border-top:none;margin-top:28px}
+.privacy-page p{font-size:.88rem;line-height:1.95;color:rgba(245,237,214,.72);margin-bottom:14px}
+.privacy-page ul{list-style:none;padding-left:0;margin-bottom:14px}
+.privacy-page ul li{font-size:.88rem;line-height:1.95;color:rgba(245,237,214,.72);padding-left:18px;position:relative;margin-bottom:4px}
+.privacy-page ul li::before{content:'';width:5px;height:1px;background:var(--gold);position:absolute;left:0;top:13px}
+.privacy-page a{color:var(--gold);text-decoration:none;transition:color .2s}
+.privacy-page a:hover{color:var(--gold-lt)}
+
+/* FOOTER */
+footer{background:var(--dark2);padding:60px;display:grid;grid-template-columns:1fr 1fr;gap:60px;border-top:1px solid rgba(201,168,76,.08)}
+.ft-logo-wrap{margin-bottom:14px;display:inline-block}
+.ft-logo-wrap img{width:72px;height:auto;display:block;mix-blend-mode:screen}
+.ft-copy{font-size:.62rem;color:var(--muted);font-family:'Cinzel',serif;letter-spacing:.08em}
+.ft-addr{font-size:.68rem;color:var(--muted);margin-top:12px;line-height:1.7}
+.ft-ct{font-family:'Cinzel',serif;font-size:.52rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);display:block;margin-bottom:16px}
+.ft-links{list-style:none;display:flex;flex-direction:column;gap:9px}
+.ft-links a{font-size:.75rem;color:var(--muted);text-decoration:none;transition:color .2s;cursor:pointer;font-family:'Raleway',sans-serif}
+.ft-links a:hover{color:var(--gold)}
+.ft-bottom{border-top:1px solid rgba(201,168,76,.08);margin-top:0;padding:18px 60px;display:flex;justify-content:space-between;align-items:center}
+.ft-legal{display:flex;gap:20px}
+.ft-legal a{font-size:.62rem;color:var(--muted);text-decoration:none;font-family:'Cinzel',serif}
+.ft-legal a:hover{color:var(--gold)}
+
+/* MOBILE */
+@media(max-width:768px){
+  nav{padding:14px 20px}
+  .nav-links{display:none}
+  .nav-links.open{display:flex;flex-direction:column;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(13,10,6,.98);align-items:center;justify-content:center;gap:26px;z-index:999}
+  .nav-links.open a{font-size:1rem}
+  .nav-links.open .nav-cta{font-size:.7rem!important;padding:12px 32px;margin-top:8px}
+  .hamburger{display:flex}
+  .privacy-page{padding:110px 20px 60px}
+  footer{grid-template-columns:1fr;padding:40px 20px;gap:32px}
+  .ft-bottom{padding:16px 22px;flex-direction:column;gap:10px;text-align:center}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo-wrap">
+    <a href="/"><img src="/favicon.png" alt="Leaf Brothers Cigars"></a>
+  </div>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="/#locations">Locations</a></li>
+    <li><a href="/#membership">Membership</a></li>
+    <li><a href="/#events">Events</a></li>
+    <li><a href="/#contact">Contact</a></li>
+    <li><a href="/sms">Text Alerts</a></li>
+  </ul>
+  <div class="hamburger" id="hamburger"><span></span><span></span><span></span></div>
+</nav>
+
+<!-- CONTENT -->
+<div class="privacy-page">
+  <span class="privacy-eyebrow">Legal</span>
+  <h1>Privacy Policy</h1>
+  <div class="gold-bar"></div>
+
+  <p class="privacy-meta">
+    Leaf Brothers Cigars LLC<br>
+    Effective Date: July 10, 2026
+  </p>
+
+  <p>Leaf Brothers Cigars LLC ("Leaf Brothers Cigars," "we," "us," or "our") operates the website leafbrotherscigars.com (the "Site") and provides cigar lounge memberships and related services at our Waukee and Ankeny, Iowa locations. This Privacy Policy explains what information we collect, how we use it, when we share it, and the choices you have. By using the Site or providing us your information, you agree to this Privacy Policy.</p>
+
+  <h2>Age Restriction</h2>
+  <p>Our Site, products, memberships, and communications are intended only for adults 21 years of age or older. We do not knowingly collect personal information from anyone under 21. If you are under 21, please do not use the Site or provide us any personal information.</p>
+
+  <h2>Information We Collect</h2>
+  <p>Information you provide to us:</p>
+  <ul>
+    <li>Account and membership information such as your name, email address, phone number, home lounge location, and account password.</li>
+    <li>Payment information processed when you purchase a membership. Payments are handled by our third-party payment processor, Square. We do not collect or store your full card number; that information is provided directly to Square.</li>
+    <li>Communications you send us, such as messages submitted through our contact form or by email.</li>
+    <li>Text messaging opt-in information, including your phone number and your consent, if you sign up for our text alerts.</li>
+  </ul>
+  <p>Information we collect automatically:</p>
+  <ul>
+    <li>When you visit the Site, we and our service providers may automatically collect technical information such as your IP address, browser type, device information, pages viewed, and similar usage data, including through cookies and comparable technologies.</li>
+  </ul>
+
+  <h2>How We Use Your Information</h2>
+  <p>We use the information we collect to:</p>
+  <ul>
+    <li>Create and manage your membership account and process your payments and renewals.</li>
+    <li>Provide lounge access, member benefits, and customer support.</li>
+    <li>Send you transactional messages about your account, membership, and purchases.</li>
+    <li>Send you marketing communications, including event announcements and sales, where you have signed up to receive them.</li>
+    <li>Operate, maintain, secure, and improve the Site.</li>
+    <li>Comply with legal obligations and enforce our terms and policies.</li>
+  </ul>
+
+  <h2>Text Messaging (SMS) Program</h2>
+  <p>If you opt in to our text message program, we will send you recurring automated marketing and informational messages, such as event announcements and sales, at the phone number you provide. Message frequency may vary. Message and data rates may apply. You can opt out at any time by replying STOP, and you can reply HELP for assistance.</p>
+  <p>Your mobile information will not be sold or shared with third parties for promotional or marketing purposes. We do not sell, rent, or share your mobile phone number or text messaging opt-in data with any third parties or affiliates for their own marketing or promotional purposes. Phone numbers collected for text messaging are used only to operate our text message program.</p>
+
+  <h2>Cookies and Analytics</h2>
+  <p>We use cookies and similar technologies to operate the Site, remember your preferences, and understand how the Site is used. You can control cookies through your browser settings, although disabling them may affect how the Site functions.</p>
+
+  <h2>How We Share Information</h2>
+  <p>We do not sell your personal information. We share information only in the following circumstances:</p>
+  <ul>
+    <li>Service providers: We share information with third-party companies that perform services on our behalf, such as payment processing, website hosting, database and account management, email delivery, and text message delivery. These providers are permitted to use your information only to provide services to us.</li>
+    <li>Legal and safety: We may disclose information when we believe it is necessary to comply with the law, respond to legal process, protect our rights or property, or protect the safety of our members, staff, or the public.</li>
+    <li>Business transfers: If we are involved in a merger, acquisition, or sale of assets, your information may be transferred as part of that transaction.</li>
+  </ul>
+  <p>As stated above, we do not share mobile opt-in information or phone numbers collected for text messaging with any third parties for their marketing purposes.</p>
+
+  <h2>Data Retention</h2>
+  <p>We retain your personal information for as long as your membership is active and as needed to provide our services, and thereafter as required to comply with our legal obligations, resolve disputes, and enforce our agreements.</p>
+
+  <h2>Data Security</h2>
+  <p>We use reasonable administrative, technical, and physical safeguards designed to protect your personal information. However, no method of transmission or storage is completely secure, and we cannot guarantee absolute security.</p>
+
+  <h2>Your Choices and Rights</h2>
+  <ul>
+    <li>Marketing emails: You can unsubscribe from marketing emails using the link in those messages.</li>
+    <li>Text messages: You can opt out of text messages at any time by replying STOP.</li>
+    <li>Account information: You may request access to, correction of, or deletion of your personal information by contacting us using the details below. We will respond consistent with applicable law.</li>
+  </ul>
+
+  <h2>Third-Party Links</h2>
+  <p>The Site may contain links to third-party websites or services that we do not control. This Privacy Policy does not apply to those third parties, and we encourage you to review their privacy policies.</p>
+
+  <h2>Children's Privacy</h2>
+  <p>The Site is not directed to children. We do not knowingly collect personal information from anyone under 21, and we do not knowingly collect personal information from children under 13. If we learn that we have collected such information, we will delete it.</p>
+
+  <h2>Changes to This Privacy Policy</h2>
+  <p>We may update this Privacy Policy from time to time. When we do, we will revise the "Effective Date" above. Your continued use of the Site after changes become effective constitutes acceptance of the updated Policy.</p>
+
+  <h2>Contact Us</h2>
+  <p>If you have questions about this Privacy Policy or our privacy practices, contact us at:</p>
+  <p>
+    Leaf Brothers Cigars LLC<br>
+    Ankeny: 1924 SW 3rd St, Ankeny, IA 50023<br>
+    Waukee: 714 Interstate Parkway, Waukee, IA 50263<br>
+    Email: <a href="mailto:Ankeny@leafbrotherscigars.com">Ankeny@leafbrotherscigars.com</a>
+  </p>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div>
+    <div class="ft-logo-wrap"><a href="/"><img src="/favicon.png" alt="Leaf Brothers Cigars"></a></div>
+    <p class="ft-copy">&copy; 2026 Leaf Brothers Cigars. All rights reserved.</p>
+    <p class="ft-addr">Ankeny & Waukee, Iowa &nbsp;&middot;&nbsp; Est. 2018</p>
+  </div>
+  <div>
+    <span class="ft-ct">Navigate</span>
+    <ul class="ft-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/#locations">Locations</a></li>
+      <li><a href="/#membership">Membership</a></li>
+      <li><a href="/#events">Events</a></li>
+      <li><a href="/#contact">Contact</a></li>
+      <li><a href="/sms">Text Alerts</a></li>
+    </ul>
+  </div>
+</footer>
+<div class="ft-bottom">
+  <span class="ft-copy">&copy; 2026 Leaf Brothers Cigars. All rights reserved.</span>
+  <div class="ft-legal"><a href="/privacy">Privacy Policy</a><a href="#">Terms of Service</a><a href="#">Age Verification</a></div>
+</div>
+
+<script>
+document.getElementById('hamburger').addEventListener('click', function() {
+  document.getElementById('navLinks').classList.toggle('open');
+});
+document.querySelectorAll('.nav-links a').forEach(function(a) {
+  a.addEventListener('click', function() {
+    document.getElementById('navLinks').classList.remove('open');
+  });
+});
+</script>
+</body>
+</html>

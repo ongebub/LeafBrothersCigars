@@ -4,6 +4,7 @@
     { "source": "/member", "destination": "/member.html" },
     { "source": "/menu", "destination": "/menu.html" },
     { "source": "/jobs", "destination": "/jobs.html" },
-    { "source": "/sms", "destination": "/sms.html" }
+    { "source": "/sms", "destination": "/sms.html" },
+    { "source": "/privacy", "destination": "/privacy.html" }
   ]
 }
