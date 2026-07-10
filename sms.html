@@ -144,7 +144,13 @@ footer{background:var(--dark2);padding:60px;display:grid;grid-template-columns:1
     <div class="consent-wrap">
       <input type="checkbox" id="smsConsent" required>
       <label class="consent-text" for="smsConsent">
-        I agree to receive recurring automated marketing text messages (event announcements and sales) from Leaf Brothers Cigars at the number provided. Consent is not a condition of any purchase. Message frequency may vary. Message and data rates may apply. Reply STOP to cancel, HELP for help.
+        By checking this box, you consent to receive text messages from Leaf Brothers. Reply STOP to opt out. Reply HELP for help. Msg & data rates may apply. Msg frequency may vary.
+      </label>
+    </div>
+    <div class="consent-wrap">
+      <input type="checkbox" id="termsConsent" required>
+      <label class="consent-text" for="termsConsent">
+        I agree to the <a href="#" style="color:var(--gold)">Terms of Service</a> and <a href="/privacy" style="color:var(--gold)">Privacy Policy</a>.
       </label>
     </div>
     <button type="submit" class="btn-gold" id="smsSubmitBtn">Sign Up for Text Alerts</button>
@@ -211,7 +217,7 @@ document.querySelectorAll('.nav-links a').forEach(function(a) {
 });
 
 // Consent text (exact label text sent to backend)
-var CONSENT_TEXT = 'I agree to receive recurring automated marketing text messages (event announcements and sales) from Leaf Brothers Cigars at the number provided. Consent is not a condition of any purchase. Message frequency may vary. Message and data rates may apply. Reply STOP to cancel, HELP for help.';
+var CONSENT_TEXT = 'By checking this box, you consent to receive text messages from Leaf Brothers. Reply STOP to opt out. Reply HELP for help. Msg & data rates may apply. Msg frequency may vary.';
 
 function submitSms(e) {
   e.preventDefault();
@@ -223,6 +229,7 @@ function submitSms(e) {
   var name = document.getElementById('smsName').value.trim();
   var location = document.getElementById('smsLocation').value;
   var consent = document.getElementById('smsConsent').checked;
+  var termsConsent = document.getElementById('termsConsent').checked;
 
   if (!phone) {
     errorEl.textContent = 'Please enter your phone number.';
@@ -235,7 +242,12 @@ function submitSms(e) {
     return false;
   }
   if (!consent) {
-    errorEl.textContent = 'You must agree to receive text messages to sign up.';
+    errorEl.textContent = 'You must consent to receive text messages to sign up.';
+    errorEl.style.display = 'block';
+    return false;
+  }
+  if (!termsConsent) {
+    errorEl.textContent = 'You must agree to the Terms of Service and Privacy Policy.';
     errorEl.style.display = 'block';
     return false;
   }
