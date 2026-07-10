@@ -1,5 +1,5 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-07-10 (Session 10)
+**Last updated:** 2026-07-10 (Session 10/11)
 
 ---
 
@@ -50,7 +50,9 @@ The end-to-end membership flow is **live in production**:
 
 5. **SMS sending NOT yet wired** — This is the collection front-end only. Actual message sending is pending 10DLC registration and SHAFT-C provider approval. No SMS provider SDK is integrated yet.
 
-6. **Privacy Policy page (`/privacy`)** — New `privacy.html` with full privacy policy covering:
+6. **Menu event slide updated** — `/menu` slide 3 now shows **Foundation Cigar Co. Brand Night** (Thursday July 30, 5-8 PM, Waukee & Ankeny). Full-bleed image (`event-photos/foundation-event.jpg`) with all event details baked in (Buy 5 Get 1 / Buy 10 Get 3 / Buy 20 Get 5 + Swag). Replaced previous 4-Brand (Jake Wyatt/Mayflower/Warfighter/West Tampa) event content. Slide timing unchanged (10s/10s/5s).
+
+7. **Privacy Policy page (`/privacy`)** — New `privacy.html` with full privacy policy covering:
    - Information collection (account, payment via Square, communications, SMS opt-in, automatic/cookies)
    - How information is used (account management, marketing, site operations, legal compliance)
    - SMS/text messaging program privacy (mobile info NOT sold/shared with third parties — required for 10DLC registration)
