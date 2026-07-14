@@ -144,13 +144,13 @@ footer{background:var(--dark2);padding:60px;display:grid;grid-template-columns:1
     <div class="consent-wrap">
       <input type="checkbox" id="smsConsent" required>
       <label class="consent-text" for="smsConsent">
-        By checking this box, you consent to receive text messages from Leaf Brothers. Reply STOP to opt out. Reply HELP for help. Msg & data rates may apply. Msg frequency may vary.
+        By checking this box, you consent to receive text message notifications regarding events and sales from Leaf Brothers Cigars. Reply STOP to opt out. Reply HELP for help. Msg &amp; data rates may apply. Msg frequency may vary.
       </label>
     </div>
     <div class="consent-wrap">
       <input type="checkbox" id="termsConsent" required>
       <label class="consent-text" for="termsConsent">
-        I agree to the <a href="#" style="color:var(--gold)">Terms of Service</a> and <a href="/privacy" style="color:var(--gold)">Privacy Policy</a>.
+        I agree to the Terms and <a href="/privacy" style="color:var(--gold)">Privacy Policy</a>.
       </label>
     </div>
     <button type="submit" class="btn-gold" id="smsSubmitBtn">Sign Up for Text Alerts</button>
@@ -217,7 +217,8 @@ document.querySelectorAll('.nav-links a').forEach(function(a) {
 });
 
 // Consent text (exact label text sent to backend)
-var CONSENT_TEXT = 'By checking this box, you consent to receive text messages from Leaf Brothers. Reply STOP to opt out. Reply HELP for help. Msg & data rates may apply. Msg frequency may vary.';
+var CONSENT_TEXT = 'By checking this box, you consent to receive text message notifications regarding events and sales from Leaf Brothers Cigars. Reply STOP to opt out. Reply HELP for help. Msg & data rates may apply. Msg frequency may vary.';
+var TERMS_TEXT = 'I agree to the Terms and Privacy Policy.';
 
 function submitSms(e) {
   e.preventDefault();
@@ -247,7 +248,7 @@ function submitSms(e) {
     return false;
   }
   if (!termsConsent) {
-    errorEl.textContent = 'You must agree to the Terms of Service and Privacy Policy.';
+    errorEl.textContent = 'You must agree to the Terms and Privacy Policy.';
     errorEl.style.display = 'block';
     return false;
   }
@@ -263,7 +264,9 @@ function submitSms(e) {
       phone: phone,
       location: location,
       consent: true,
-      consent_text: CONSENT_TEXT
+      consent_text: CONSENT_TEXT,
+      terms_agreed: true,
+      terms_agreed_text: TERMS_TEXT
     })
   })
   .then(function(res) { return res.json().then(function(data) { return { ok: res.ok, data: data }; }); })

@@ -5,6 +5,8 @@ CREATE TABLE IF NOT EXISTS sms_subscribers (
   location_preference TEXT,
   consent       BOOLEAN NOT NULL,
   consent_text  TEXT,
+  terms_agreed  BOOLEAN,
+  terms_agreed_text TEXT,
   source        TEXT DEFAULT 'web_form',
   ip_address    TEXT,
   user_agent    TEXT,

@@ -1,5 +1,5 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-07-10 (Session 10/11)
+**Last updated:** 2026-07-14 (Session 10/11/12)
 
 ---
 
@@ -50,7 +50,15 @@ The end-to-end membership flow is **live in production**:
 
 5. **SMS sending NOT yet wired** — This is the collection front-end only. Actual message sending is pending 10DLC registration and SHAFT-C provider approval. No SMS provider SDK is integrated yet.
 
-6. **Menu event slide updated** — `/menu` slide 3 now shows **Foundation Cigar Co. Brand Night** (Thursday July 30, 5-8 PM, Waukee & Ankeny). Full-bleed image (`event-photos/foundation-event.jpg`) with all event details baked in (Buy 5 Get 1 / Buy 10 Get 3 / Buy 20 Get 5 + Swag). Replaced previous 4-Brand (Jake Wyatt/Mayflower/Warfighter/West Tampa) event content. Slide timing unchanged (10s/10s/5s).
+6. **SMS consent checkboxes updated to exact compliance wording** — Two separate, unchecked, required checkboxes on `/sms`:
+   - **Checkbox 1 (SMS Consent):** "By checking this box, you consent to receive text message notifications regarding events and sales from Leaf Brothers Cigars. Reply STOP to opt out. Reply HELP for help. Msg & data rates may apply. Msg frequency may vary."
+   - **Checkbox 2 (Terms & Privacy):** "I agree to the Terms and Privacy Policy." — "Privacy Policy" links to `/privacy`; "Terms" is plain text (no terms page exists yet)
+   - Both required to submit; backend (`api/sms-signup.js`) rejects with 400 unless both `consent` and `terms_agreed` are true
+   - Consent text stored in `consent_text` column is the exact Checkbox 1 string (10DLC proof-of-consent)
+   - **New Supabase columns needed:** `terms_agreed` (boolean) and `terms_agreed_text` (text) on `sms_subscribers` — run ALTER TABLE below
+   - SQL file updated: `supabase/sms_subscribers.sql`
+
+7. **Menu event slide updated** — `/menu` slide 3 now shows **Foundation Cigar Co. Brand Night** (Thursday July 30, 5-8 PM, Waukee & Ankeny). Full-bleed image (`event-photos/foundation-event.jpg`) with all event details baked in (Buy 5 Get 1 / Buy 10 Get 3 / Buy 20 Get 5 + Swag). Replaced previous 4-Brand (Jake Wyatt/Mayflower/Warfighter/West Tampa) event content. Slide timing unchanged (10s/10s/5s).
 
 7. **Privacy Policy page (`/privacy`)** — New `privacy.html` with full privacy policy covering:
    - Information collection (account, payment via Square, communications, SMS opt-in, automatic/cookies)

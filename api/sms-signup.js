@@ -20,12 +20,16 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { first_name, phone, location, consent, consent_text } = req.body;
+    const { first_name, phone, location, consent, consent_text, terms_agreed, terms_agreed_text } = req.body;
 
-    // Validate consent
+    // Validate both consents
     if (consent !== true) {
-      console.log('[sms-signup] Rejected: consent not true');
+      console.log('[sms-signup] Rejected: SMS consent not true');
       return res.status(400).json({ error: 'You must consent to receive text messages.' });
+    }
+    if (terms_agreed !== true) {
+      console.log('[sms-signup] Rejected: terms consent not true');
+      return res.status(400).json({ error: 'You must agree to the Terms and Privacy Policy.' });
     }
 
     // Validate and format phone
@@ -57,6 +61,8 @@ module.exports = async function handler(req, res) {
         location_preference: location,
         consent: true,
         consent_text: consent_text || null,
+        terms_agreed: true,
+        terms_agreed_text: terms_agreed_text || null,
         source: 'web_form',
         ip_address: ip,
         user_agent: userAgent,
