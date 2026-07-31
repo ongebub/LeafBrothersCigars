@@ -15,6 +15,8 @@
 
 3. **Ankeny/Waukee on job application** — Already present. `jobs.html` has a required "Preferred Location" field with Waukee, Ankeny, and "Either location works" options, submitted to Formspree as the `Preferred Location` field.
 
+4. **Removed Bartender from /jobs application** — Removed the "Weekend Bartender" position card and dropdown option. Remaining positions: Daytime Sales Associate (Part-Time), Evening Sales Associate (Part-Time).
+
 ---
 
 ## ✅ FULLY WORKING AS OF SESSION 3
