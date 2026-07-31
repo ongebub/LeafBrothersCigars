@@ -1,5 +1,19 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-07-14 (Session 10/11/12)
+**Last updated:** 2026-07-31 (Session 13)
+
+---
+
+## Session 13 Updates (2026-07-31)
+
+1. **Footer "Apply Here" link** — Added `/jobs` link labeled "Apply Here" to the Navigate column in the footer on all pages that have one: `index.html`, `leafbrothers_v6.html`, `privacy.html`, `sms.html`.
+
+2. **Site-wide 16px minimum font size** — Audited and raised all font-size values below 16px (1rem) to at least 16px/1rem across all pages: `index.html`, `leafbrothers_v6.html`, `privacy.html`, `sms.html`, `jobs.html`, `member.html`, `admin.html`. `menu.html` (TV display) left unchanged per request.
+   - **Exceptions (decorative, not readable text):**
+     - `.tier-perks li::before` (0.45rem) — decorative ✦ bullet character in `index.html` and `leafbrothers_v6.html`
+     - `.tier-evt-perk span` (0.45rem) — decorative bullet in `index.html`
+   - All `clamp()` values left untouched (they have their own responsive floors).
+
+3. **Ankeny/Waukee on job application** — Already present. `jobs.html` has a required "Preferred Location" field with Waukee, Ankeny, and "Either location works" options, submitted to Formspree as the `Preferred Location` field.
 
 ---
 
