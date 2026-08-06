@@ -1,5 +1,11 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-07-31 (Session 13)
+**Last updated:** 2026-08-06 (Session 14)
+
+---
+
+## Session 14 Updates (2026-08-06)
+
+1. **Menu event slide → Perdomo Brand Night (Aug 27)** — Swapped the event slide on `/menu` from Foundation Cigar Co. (Jul 30) to Perdomo Brand Night (Thu Aug 27, 5–8 PM, Waukee & Ankeny). Deals: Buy 5 Get 1 / Buy 10 Get 3 / Buy 20 Get 5 + Swag. Full-bleed image (`event-photos/perdomo-event.jpg`) — all event details baked into the image.
 
 ---
 
