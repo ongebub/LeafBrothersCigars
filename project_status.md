@@ -1,5 +1,11 @@
 # Leaf Brothers Cigars — Project Status
-**Last updated:** 2026-08-06 (Session 14)
+**Last updated:** 2026-09-11 (Session 15)
+
+---
+
+## Session 15 Updates (2026-09-11)
+
+1. **Iowa vs Iowa State email hero** — Added `event-photos/ia-game-email.jpg` (Sat 9/12, 6:30 PM; 2 cigars + 2 Confluence beers $35, deal 6–10 PM). Accessible at `https://www.leafbrotherscigars.com/event-photos/ia-game-email.jpg` after deploy.
 
 ---
 
