@@ -1,5 +1,5 @@
 const { ACCOUNTS, getClient } = require('./_squareAccounts');
-const { BY_SKU, EVENT_DISCOUNT, TAX_RATE, LOCATION_KEY } = require('./_ashtonCatalog');
+const { BY_SKU, EVENT_DISCOUNT, TAX_PERCENT, LOCATION_KEY } = require('./_ashtonCatalog');
 
 // Staff passcode for the event page. Set ASHTON_EVENT_PASSCODE in Vercel to
 // change it without a deploy. This gate exists to keep the public out of a
@@ -116,7 +116,7 @@ module.exports = async function handler(req, res) {
         lineItems: built,
         taxes: [{
           name: 'Iowa Sales Tax',
-          percentage: String(TAX_RATE * 100),
+          percentage: TAX_PERCENT,
           scope: 'ORDER',
         }],
         // No fulfillment block: a SCHEDULED pickup requires a pickup_at time,
