@@ -119,9 +119,31 @@ module.exports = async function handler(req, res) {
           percentage: TAX_PERCENT,
           scope: 'ORDER',
         }],
-        // No fulfillment block: a SCHEDULED pickup requires a pickup_at time,
-        // and nobody knows when the Ashton delivery lands. Square rejects the
-        // order outright without it.
+        // The fulfillment is what puts the ticket on the register. An order
+        // with no fulfillment is written to Square perfectly well and is
+        // simply never displayed by the POS -- verified the hard way on
+        // 2026-09-12, twice, with Chris standing at the counter looking at an
+        // empty screen. Every ticket the POS shows carries one.
+        //
+        // It has to be PICKUP with schedule_type ASAP. IN_STORE is what the
+        // POS puts on its own tickets but it is not in the public
+        // FulfillmentType enum, and SCHEDULED is rejected without a pickup_at
+        // that nobody can know -- the boxes land when Ashton ships them.
+        // ASAP lets Square compute pickup_at from prep_time_duration instead.
+        fulfillments: [{
+          type: 'PICKUP',
+          state: 'PROPOSED',
+          pickupDetails: {
+            scheduleType: 'ASAP',
+            prepTimeDuration: 'P1D',
+            recipient: {
+              displayName: customerName.slice(0, 255),
+              phoneNumber: e164Phone,
+              ...(customerEmail && { emailAddress: customerEmail.slice(0, 255) }),
+            },
+            note: 'Ashton event pre-order — collect when the box lands',
+          },
+        }],
         metadata: {
           event: 'ashton-2026-09-17',
           customer_name: customerName.slice(0, 255),
