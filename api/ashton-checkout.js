@@ -31,11 +31,15 @@ const cents = n => BigInt(Math.round(n * 100));
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { passcode, name, phone, email, lines } = req.body || {};
+  const { passcode, verify, name, phone, email, lines } = req.body || {};
 
   if (String(passcode || '').trim().toUpperCase() !== PASSCODE) {
     return res.status(401).json({ error: 'Wrong passcode' });
   }
+
+  // The page asks here before unlocking. The code lives in Vercel, never in
+  // this repo (which is public), so the gate cannot check it in the browser.
+  if (verify) return res.status(200).json({ ok: true });
 
   const customerName = String(name || '').trim();
   if (customerName.length < 2) {
