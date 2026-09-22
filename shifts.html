@@ -1,0 +1,444 @@
+<title>Shift Board — Leaf Brothers Cigars</title>
+<meta name="robots" content="noindex,nofollow,noarchive">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Raleway:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --ink:#14100d; --panel:#1d1813; --panel-2:#251f18; --line:#3a3128;
+  --cream:#f2ebde; --muted:#a2957f; --gold:#c9a227; --gold-dim:#8f7420;
+  --red:#e2564a; --green:#6fae62;
+  --sans:"Raleway",system-ui,sans-serif;
+  --display:"Cinzel",Georgia,serif;
+  --r:3px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--cream);font-family:var(--sans);
+  -webkit-font-smoothing:antialiased;
+  padding-bottom:env(safe-area-inset-bottom,0px)}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+
+header{border-bottom:1px solid var(--line);background:var(--panel);
+  padding:14px 18px;display:flex;align-items:center;gap:14px;
+  padding-top:calc(14px + env(safe-area-inset-top,0px))}
+.mark{font-family:var(--display);font-weight:600;letter-spacing:.14em;
+  font-size:.9rem;color:var(--gold);line-height:1.1}
+.mark small{display:block;font-family:var(--sans);font-weight:500;
+  letter-spacing:.18em;font-size:.58rem;color:var(--muted);
+  text-transform:uppercase;margin-top:3px}
+.spacer{flex:1}
+.who{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  text-align:right;line-height:1.5}
+.linkish{background:none;border:none;color:var(--muted);text-decoration:underline;
+  padding:0;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase}
+
+main{max-width:680px;margin:0 auto;padding:22px 18px 60px}
+h1{font-family:var(--display);font-weight:600;font-size:1.35rem;letter-spacing:.05em;
+  color:var(--gold);margin:0 0 6px}
+.sub{color:var(--muted);font-size:.9rem;margin:0 0 26px;line-height:1.5}
+
+label{display:block;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 7px}
+input,select,textarea{width:100%;background:var(--panel);border:1px solid var(--line);
+  color:var(--cream);border-radius:var(--r);padding:13px 14px;font:inherit;font-size:1rem}
+input[inputmode=numeric]{letter-spacing:.5em;text-align:center;font-weight:700}
+.field{margin-bottom:16px}
+.row{display:flex;gap:10px}
+.row>*{flex:1;min-width:0}
+
+.btn{background:var(--gold);color:#1a1408;border:none;border-radius:var(--r);
+  padding:14px 20px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  font-size:.78rem;width:100%}
+.btn:active{background:var(--gold-dim)}
+.btn:disabled{opacity:.5}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.btn.slim{width:auto;padding:10px 16px;font-size:.7rem}
+
+.seg{display:flex;gap:8px;margin-bottom:22px}
+.seg button{flex:1;background:var(--panel);border:1px solid var(--line);color:var(--muted);
+  border-radius:var(--r);padding:12px;font-size:.74rem;letter-spacing:.1em;
+  text-transform:uppercase;font-weight:600}
+.seg button[aria-pressed=true]{background:var(--gold);color:#1a1408;border-color:var(--gold)}
+
+.err{color:var(--red);font-size:.85rem;margin-top:12px;min-height:1.2em;line-height:1.45}
+.ok{color:var(--green)}
+
+h2{font-family:var(--display);font-weight:600;font-size:.95rem;letter-spacing:.08em;
+  color:var(--cream);margin:30px 0 12px;display:flex;align-items:baseline;gap:9px}
+h2 .count{font-family:var(--sans);font-size:.65rem;letter-spacing:.12em;color:var(--muted);
+  border:1px solid var(--line);border-radius:100px;padding:3px 9px}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  padding:15px 16px;margin-bottom:10px}
+.card.covered{background:var(--panel-2);border-color:#2f3a2c}
+.card .when{font-size:1.02rem;font-weight:600;margin-bottom:5px}
+.card .meta{font-size:.78rem;color:var(--muted);line-height:1.6}
+.card .note{font-size:.88rem;margin-top:9px;color:var(--cream);
+  border-left:2px solid var(--line);padding-left:10px;white-space:pre-wrap}
+.card .acts{display:flex;gap:8px;margin-top:13px;flex-wrap:wrap}
+.tag{display:inline-block;font-size:.6rem;letter-spacing:.13em;text-transform:uppercase;
+  font-weight:700;padding:3px 8px;border-radius:100px;background:var(--line);color:var(--cream);
+  vertical-align:2px;margin-left:7px}
+.empty{color:var(--muted);font-size:.88rem;padding:16px 0 4px;line-height:1.5}
+
+details{border-top:1px solid var(--line);margin-top:34px;padding-top:18px}
+summary{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+  cursor:pointer;list-style:none}
+summary::-webkit-details-marker{display:none}
+details[open] summary{margin-bottom:16px;color:var(--gold)}
+.staffrow{display:flex;align-items:center;gap:10px;padding:9px 0;
+  border-bottom:1px solid var(--line);font-size:.9rem}
+.staffrow .spacer{flex:1}
+[hidden]{display:none!important}
+</style>
+
+<header>
+  <div class="mark">LEAF BROTHERS<small>Shift Board</small></div>
+  <div class="spacer"></div>
+  <div class="who" id="who" hidden></div>
+</header>
+
+<main>
+
+<!-- ------------------------------------------------ sign in -->
+<section id="signin" hidden>
+  <h1>Sign in</h1>
+  <p class="sub">Shifts you need covered, and shifts you can pick up. Nothing else.</p>
+
+  <div class="seg" id="shopseg">
+    <button type="button" data-shop="waukee" aria-pressed="false">Waukee</button>
+    <button type="button" data-shop="ankeny" aria-pressed="false">Ankeny</button>
+  </div>
+
+  <div id="whostep" hidden>
+    <div class="field">
+      <label for="name">Who are you</label>
+      <select id="name"></select>
+    </div>
+
+    <div id="pinstep" hidden>
+      <div class="field">
+        <label for="pin" id="pinlabel">Your PIN</label>
+        <input id="pin" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="····">
+      </div>
+      <div class="field" id="joinfield" hidden>
+        <label for="joincode">Shop join code — ask Chris</label>
+        <input id="joincode" autocomplete="off" placeholder="First time only">
+      </div>
+      <button class="btn" id="go">Sign in</button>
+      <div class="err" id="signin-err"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ------------------------------------------------ board -->
+<section id="board" hidden>
+  <h1>Shift board</h1>
+  <p class="sub" id="boardsub"></p>
+
+  <button class="btn ghost" id="show-post">Post a shift I need covered</button>
+
+  <form id="postform" hidden style="margin-top:18px">
+    <div class="field" id="shopfield" hidden>
+      <label for="p-shop">Which shop</label>
+      <select id="p-shop"></select>
+    </div>
+    <div class="field">
+      <label for="p-date">Date</label>
+      <input type="date" id="p-date" required>
+    </div>
+    <div class="row">
+      <div class="field"><label for="p-start">Start</label><input type="time" id="p-start"></div>
+      <div class="field"><label for="p-end">End</label><input type="time" id="p-end"></div>
+    </div>
+    <div class="field">
+      <label for="p-note">Anything worth saying (optional)</label>
+      <input id="p-note" maxlength="200" placeholder="Wedding — can't get out of it">
+    </div>
+    <div class="row">
+      <button class="btn" id="p-go" type="submit">Post it</button>
+      <button class="btn ghost" id="p-cancel" type="button">Never mind</button>
+    </div>
+    <div class="err" id="post-err"></div>
+  </form>
+
+  <h2>Needs covered <span class="count" id="c-open">0</span></h2>
+  <div id="list-open"></div>
+
+  <h2>Covered <span class="count" id="c-covered">0</span></h2>
+  <div id="list-covered"></div>
+
+  <details id="adminbox" hidden>
+    <summary>Chris — staff PINs</summary>
+    <p class="sub" style="margin-bottom:14px">Resetting clears someone's PIN. They set a new
+      one themselves with the shop join code, same as the first time.</p>
+    <div class="seg" id="adminseg">
+      <button type="button" data-shop="waukee" aria-pressed="true">Waukee</button>
+      <button type="button" data-shop="ankeny" aria-pressed="false">Ankeny</button>
+    </div>
+    <div id="stafflist"></div>
+    <div class="err" id="admin-err"></div>
+  </details>
+
+  <p style="margin-top:34px"><button class="linkish" id="signout">Sign out</button></p>
+</section>
+
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const state = { shop: null, roster: [], me: null };
+
+async function api(action, body) {
+  const res = await fetch('/api/shifts', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify(Object.assign({ action }, body || {})),
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) { /* non-JSON error page */ }
+  if (!res.ok) throw new Error(data.error || 'Something went wrong. Try again.');
+  return data;
+}
+
+function show(which) {
+  $('signin').hidden = which !== 'signin';
+  $('board').hidden = which !== 'board';
+}
+
+// ----------------------------------------------------------- sign in
+
+for (const b of $('shopseg').children) {
+  b.onclick = async () => {
+    state.shop = b.dataset.shop;
+    for (const o of $('shopseg').children) o.setAttribute('aria-pressed', String(o === b));
+    $('signin-err').textContent = '';
+    $('pinstep').hidden = true;
+    try {
+      const { roster } = await api('roster', { shop: state.shop });
+      state.roster = roster;
+      const sel = $('name');
+      sel.innerHTML = '<option value="">Pick your name…</option>' +
+        roster.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+      $('whostep').hidden = false;
+    } catch (e) { $('signin-err').textContent = e.message; }
+  };
+}
+
+$('name').onchange = () => {
+  const person = state.roster.find((p) => p.id === $('name').value);
+  $('pinstep').hidden = !person;
+  if (!person) return;
+  const first = !person.enrolled;
+  $('joinfield').hidden = !first;
+  $('pinlabel').textContent = first ? 'Pick a 4-digit PIN' : 'Your PIN';
+  $('go').textContent = first ? 'Set up' : 'Sign in';
+  $('pin').value = '';
+  $('signin-err').textContent = '';
+};
+
+$('go').onclick = async () => {
+  const person = state.roster.find((p) => p.id === $('name').value);
+  if (!person) return;
+  $('go').disabled = true;
+  $('signin-err').textContent = '';
+  try {
+    const args = { staff_id: person.id, pin: $('pin').value };
+    const out = person.enrolled
+      ? await api('login', args)
+      : await api('enroll', Object.assign({ shop: state.shop,
+                                            join_code: $('joincode').value }, args));
+    state.me = out.me;
+    await loadBoard();
+  } catch (e) {
+    $('signin-err').textContent = e.message;
+  } finally {
+    $('go').disabled = false;
+  }
+};
+
+// ------------------------------------------------------------- board
+
+function fmtDate(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US',
+    { weekday: 'long', month: 'short', day: 'numeric' });
+}
+
+function fmtTime(t) {
+  if (!t) return null;
+  const [h, m] = t.split(':').map(Number);
+  const ap = h >= 12 ? 'pm' : 'am';
+  const hh = h % 12 === 0 ? 12 : h % 12;
+  return m ? `${hh}:${String(m).padStart(2, '0')}${ap}` : `${hh}${ap}`;
+}
+
+function when(t) {
+  const a = fmtTime(t.start), b = fmtTime(t.end);
+  if (a && b) return `${fmtDate(t.date)}, ${a}–${b}`;
+  if (a) return `${fmtDate(t.date)}, from ${a}`;
+  return fmtDate(t.date);
+}
+
+// Names come from the roster Chris controls, not from anything a visitor
+// types, but they still go through here -- an escaping rule with exceptions
+// stops being a rule.
+function esc(v) {
+  return String(v == null ? '' : v).replace(/[<>&"]/g,
+    (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+}
+
+function card(t, covered) {
+  const el = document.createElement('div');
+  el.className = 'card' + (covered ? ' covered' : '');
+  const shopTag = state.me.is_admin || state.me.shops.length > 1
+    ? `<span class="tag">${t.shop}</span>` : '';
+  el.innerHTML =
+    `<div class="when">${when(t)}${shopTag}</div>` +
+    `<div class="meta">${covered
+      ? `${esc(t.claimed_by)} is covering for ${esc(t.posted_by)}`
+      : `${esc(t.posted_by)} needs this covered`}</div>` +
+    (t.note ? `<div class="note">${esc(t.note)}</div>` : '');
+
+  const acts = document.createElement('div');
+  acts.className = 'acts';
+  const add = (label, action, ghost) => {
+    const b = document.createElement('button');
+    b.className = 'btn slim' + (ghost ? ' ghost' : '');
+    b.textContent = label;
+    b.onclick = async () => {
+      b.disabled = true;
+      try { await api(action, { trade_id: t.id }); await loadBoard(); }
+      catch (e) { alert(e.message); b.disabled = false; }
+    };
+    acts.appendChild(b);
+  };
+
+  if (!covered) {
+    if (t.posted_by_id !== state.me.id) add("I'll take it", 'claim');
+    if (t.posted_by_id === state.me.id || state.me.is_admin) add('Cancel it', 'cancel', true);
+  } else {
+    if (t.claimed_by_id === state.me.id || state.me.is_admin) add('Give it back', 'unclaim', true);
+  }
+  if (acts.children.length) el.appendChild(acts);
+  return el;
+}
+
+function paint(listId, trades, covered, emptyText) {
+  const box = $(listId);
+  box.innerHTML = '';
+  if (!trades.length) {
+    box.innerHTML = `<p class="empty">${emptyText}</p>`;
+    return;
+  }
+  for (const t of trades) box.appendChild(card(t, covered));
+}
+
+async function loadBoard() {
+  const data = await api('board');
+  state.me = data.me;
+  show('board');
+
+  $('who').hidden = false;
+  $('who').textContent = data.me.name;
+  $('boardsub').textContent = data.me.is_admin
+    ? 'Both shops. Everything staff have posted, and who picked it up.'
+    : 'Post a shift you need covered, or pick one up.';
+
+  $('c-open').textContent = data.needs_covered.length;
+  $('c-covered').textContent = data.covered.length;
+  paint('list-open', data.needs_covered, false, 'Nothing needs covering. Good week.');
+  paint('list-covered', data.covered, true, 'Nothing covered yet.');
+
+  const shops = data.me.is_admin ? ['waukee', 'ankeny'] : data.me.shops;
+  $('shopfield').hidden = shops.length < 2;
+  $('p-shop').innerHTML = shops.map((s) =>
+    `<option value="${s}">${s[0].toUpperCase() + s.slice(1)}</option>`).join('');
+
+  $('adminbox').hidden = !data.me.is_admin;
+  if (data.me.is_admin) paintStaff('waukee');
+}
+
+$('show-post').onclick = () => {
+  $('postform').hidden = false;
+  $('show-post').hidden = true;
+  $('p-date').min = new Date().toLocaleDateString('en-CA');
+};
+$('p-cancel').onclick = () => {
+  $('postform').hidden = true;
+  $('show-post').hidden = false;
+  $('post-err').textContent = '';
+};
+
+$('postform').onsubmit = async (ev) => {
+  ev.preventDefault();
+  $('p-go').disabled = true;
+  $('post-err').textContent = '';
+  try {
+    await api('post', {
+      shop: $('p-shop').value,
+      date: $('p-date').value,
+      start: $('p-start').value,
+      end: $('p-end').value,
+      note: $('p-note').value,
+    });
+    $('postform').reset();
+    $('postform').hidden = true;
+    $('show-post').hidden = false;
+    await loadBoard();
+  } catch (e) {
+    $('post-err').textContent = e.message;
+  } finally {
+    $('p-go').disabled = false;
+  }
+};
+
+// ------------------------------------------------------------- admin
+
+async function paintStaff(shop) {
+  const { roster } = await api('roster', { shop });
+  const box = $('stafflist');
+  box.innerHTML = '';
+  for (const p of roster) {
+    const row = document.createElement('div');
+    row.className = 'staffrow';
+    row.innerHTML = `<span>${esc(p.name)}</span>` +
+      `<span class="meta" style="color:var(--muted);font-size:.72rem">` +
+      `${p.enrolled ? 'set up' : 'not set up yet'}</span><span class="spacer"></span>`;
+    if (p.enrolled) {
+      const b = document.createElement('button');
+      b.className = 'btn ghost slim';
+      b.textContent = 'Reset PIN';
+      b.onclick = async () => {
+        if (!confirm(`Clear ${p.name}'s PIN? They'll set a new one with the join code.`)) return;
+        b.disabled = true;
+        try { await api('reset_pin', { staff_id: p.id }); await paintStaff(shop); }
+        catch (e) { $('admin-err').textContent = e.message; b.disabled = false; }
+      };
+      row.appendChild(b);
+    }
+    box.appendChild(row);
+  }
+}
+
+for (const b of $('adminseg').children) {
+  b.onclick = () => {
+    for (const o of $('adminseg').children) o.setAttribute('aria-pressed', String(o === b));
+    paintStaff(b.dataset.shop);
+  };
+}
+
+$('signout').onclick = async () => {
+  await api('signout');
+  state.me = null;
+  $('who').hidden = true;
+  show('signin');
+};
+
+// The cookie lasts sixty days, so most of the time this lands straight on the
+// board and nobody types anything.
+loadBoard().catch(() => show('signin'));
+</script>
