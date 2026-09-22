@@ -142,6 +142,19 @@ module.exports = async function handler(req, res) {
           p_note: body.note || null,
         }) });
 
+      // Chris only.  He enters a shift somebody told him about in person.
+      // The trade belongs to THAT person -- see shift_post_for in the schema.
+      case 'post_for':
+        return res.json({ trade: await call('shift_post_for', {
+          p_token: token,
+          p_staff_id: body.staff_id,
+          p_shop: body.shop,
+          p_date: body.date,
+          p_start: body.start || null,
+          p_end: body.end || null,
+          p_note: body.note || null,
+        }) });
+
       case 'claim':
         return res.json({ trade: await call('shift_claim', {
           p_token: token, p_trade_id: body.trade_id }) });

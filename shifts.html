@@ -145,6 +145,10 @@ details[open] summary{margin-bottom:16px;color:var(--gold)}
       <label for="p-shop">Which shop</label>
       <select id="p-shop"></select>
     </div>
+    <div class="field" id="forfield" hidden>
+      <label for="p-for">Who is this for</label>
+      <select id="p-for"></select>
+    </div>
     <div class="field">
       <label for="p-date">Date</label>
       <input type="date" id="p-date" required>
@@ -300,7 +304,8 @@ function card(t, covered) {
     `<div class="when">${when(t)}${shopTag}</div>` +
     `<div class="meta">${covered
       ? `${esc(t.claimed_by)} is covering for ${esc(t.posted_by)}`
-      : `${esc(t.posted_by)} needs this covered`}</div>` +
+      : `${esc(t.posted_by)} needs this covered`}${
+      t.posted_by_admin ? ` &middot; added by ${esc(t.posted_by_admin)}` : ''}</div>` +
     (t.note ? `<div class="note">${esc(t.note)}</div>` : '');
 
   const acts = document.createElement('div');
@@ -360,7 +365,35 @@ async function loadBoard() {
 
   $('adminbox').hidden = !data.me.is_admin;
   if (data.me.is_admin) paintStaff('waukee');
+
+  // Only Chris gets to post on somebody else's behalf, so only Chris sees
+  // the picker. The server enforces it too -- this just keeps it out of the
+  // way for everyone else.
+  $('forfield').hidden = !data.me.is_admin;
+  if (data.me.is_admin) fillPostFor();
 }
+
+// Whoever is picked must actually work at the selected shop, so this reloads
+// every time the shop changes rather than listing all ten staff.
+async function fillPostFor() {
+  if (!state.me || !state.me.is_admin) return;
+  const sel = $('p-for');
+  const keep = sel.value;
+  const shop = $('p-shop').value || state.shop;
+  let roster = [];
+  try {
+    ({ roster } = await api('roster', { shop }));
+  } catch (e) {
+    sel.innerHTML = '<option value="">Me</option>';
+    return;
+  }
+  sel.innerHTML = '<option value="">Me</option>' + roster
+    .filter((r) => r.id !== state.me.id)
+    .map((r) => `<option value="${r.id}">${esc(r.name)}</option>`).join('');
+  if ([...sel.options].some((o) => o.value === keep)) sel.value = keep;
+}
+
+$('p-shop').onchange = fillPostFor;
 
 $('show-post').onclick = () => {
   $('postform').hidden = false;
@@ -378,16 +411,20 @@ $('postform').onsubmit = async (ev) => {
   $('p-go').disabled = true;
   $('post-err').textContent = '';
   try {
-    await api('post', {
+    const forId = $('forfield').hidden ? '' : $('p-for').value;
+    const body = {
       shop: $('p-shop').value,
       date: $('p-date').value,
       start: $('p-start').value,
       end: $('p-end').value,
       note: $('p-note').value,
-    });
+    };
+    if (forId) body.staff_id = forId;
+    await api(forId ? 'post_for' : 'post', body);
     $('postform').reset();
     $('postform').hidden = true;
     $('show-post').hidden = false;
+    if (!$('forfield').hidden) $('p-for').value = '';
     await loadBoard();
   } catch (e) {
     $('post-err').textContent = e.message;
