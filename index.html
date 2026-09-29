@@ -805,6 +805,21 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
   </div>
 </div>
 
+<!-- WELCOME MODAL: shown when Stripe checkout sends a new member back with ?welcome=1 -->
+<div class="modal-overlay" id="welcomeModal">
+  <div class="modal" style="text-align:center">
+    <button class="m-close" onclick="closeModal('welcomeModal')">×</button>
+    <span class="m-badge">Membership Active</span>
+    <h2 class="m-title">Congratulations, you&rsquo;re a member!</h2>
+    <div class="gold-bar" style="margin:18px auto 22px;"></div>
+    <p style="font-size:1.05rem;color:var(--cream);margin-bottom:14px">Your payment went through and your membership is active. A receipt is on its way to your email.</p>
+    <p style="font-size:1rem;color:var(--muted);margin-bottom:14px">Log in to the member portal any time to see your membership and renewal date. <strong style="color:var(--cream);font-weight:400">First time?</strong> Tap <em>Forgot Password</em> on the login screen and use the email you signed up with to set your password.</p>
+    <p style="font-size:1rem;color:var(--muted);margin-bottom:26px">Your member discount will be on your account at the counter by the next day &mdash; just give them your name or phone number.</p>
+    <a class="m-submit" href="/member" style="display:block;text-decoration:none">Go to the Member Portal &rarr;</a>
+    <p style="margin-top:16px;font-size:1rem"><a href="#" onclick="closeModal('welcomeModal');return false" style="color:var(--gold);text-decoration:none">Back to the site</a></p>
+  </div>
+</div>
+
 <!-- CANCEL MODAL -->
 <div class="modal-overlay" id="cancelModal">
   <div class="modal" style="max-width:400px">
@@ -917,7 +932,7 @@ async function submitContact(){
   }catch(e){showToast('Network error. Please try again.')}
   btn.disabled=false;btn.textContent='Send Message';
 }
-if(new URLSearchParams(window.location.search).get('welcome')==='1'){history.replaceState(null,'','/');setTimeout(()=>{showToast('Payment successful! Sign in to access your member dashboard.');showLogin()},600)}
+if(new URLSearchParams(window.location.search).get('welcome')==='1'){history.replaceState(null,'','/');window.addEventListener('load',()=>setTimeout(()=>document.getElementById('welcomeModal').classList.add('active'),400))}
 if(new URLSearchParams(window.location.search).get('login')==='1'){history.replaceState(null,'','/');setTimeout(()=>showLogin(),300)}
 window.addEventListener('load',()=>{if(sessionStorage.getItem('loggedIn')==='true')loadDashboard()});
 </script>
