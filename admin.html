@@ -1015,8 +1015,8 @@ function openEditModal(id) {
   document.getElementById('f-locker').value = m.locker_number || '';
   document.getElementById('f-join').value = m.join_date || '';
   document.getElementById('f-renewal').value = m.renewal_date || '';
-  // Show cancel button only for active members with a Square subscription
-  const showCancel = m.square_subscription_id && m.status === 'active';
+  // Show cancel button only for active members with a subscription (Stripe since 2026-09-29, or Square)
+  const showCancel = (m.stripe_subscription_id || m.square_subscription_id) && m.status === 'active';
   document.getElementById('cancel-sub-section').style.display = showCancel ? 'block' : 'none';
   document.getElementById('member-modal').classList.add('open');
 }
@@ -1062,9 +1062,9 @@ async function saveMember() {
 }
 
 async function cancelSubscription() {
-  if (!editingMember || !editingMember.square_subscription_id) return;
+  if (!editingMember || !(editingMember.stripe_subscription_id || editingMember.square_subscription_id)) return;
   const name = editingMember.name || 'this member';
-  if (!confirm(`Cancel ${name}'s Square subscription?\n\nThey will keep access until the end of their current billing period, then billing will stop. This cannot be undone from the admin UI.`)) return;
+  if (!confirm(`Cancel ${name}'s subscription?\n\nThey will keep access until the end of their current billing period, then billing will stop. This cannot be undone from the admin UI.`)) return;
 
   const btn = document.getElementById('cancel-sub-btn');
   btn.disabled = true;
@@ -1078,7 +1078,7 @@ async function cancelSubscription() {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + session.access_token,
       },
-      body: JSON.stringify({ subscriptionId: editingMember.square_subscription_id }),
+      body: JSON.stringify({ subscriptionId: editingMember.stripe_subscription_id || editingMember.square_subscription_id }),
     });
     const result = await resp.json();
     if (result.success) {
