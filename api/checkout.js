@@ -1,4 +1,7 @@
-const { ACCOUNTS, TIER_PRICES, resolveAccount, getClient } = require('./_squareAccounts');
+const { TIERS, LOCATIONS, getStripe } = require('./_stripe');
+
+// Memberships check out through Stripe since 2026-09-29 -- Square stopped
+// taking card-not-present payments on the cigar accounts.  See _stripe.js.
 
 // Format phone to E.164 (+15155550100). Returns null if invalid.
 function formatPhone(raw) {
@@ -12,125 +15,62 @@ function formatPhone(raw) {
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { tier, name, email, phone, home_location } = req.body;
+  const { tier, name, email, phone, home_location } = req.body || {};
 
-  // Validate tier
-  const tierInfo = TIER_PRICES[tier];
-  if (!tierInfo) return res.status(400).json({ error: 'Invalid tier' });
-
-  // Resolve account from home_location
-  let accountKey;
-  try {
-    accountKey = resolveAccount(home_location);
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
+  if (!TIERS.includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
+  const loc = LOCATIONS.find(l => l.toLowerCase() === String(home_location || '').trim().toLowerCase());
+  if (!loc) return res.status(400).json({ error: 'home_location is required (Ankeny, Waukee or Both)' });
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'Checkout failed', detail: 'Please enter a valid email address.', fieldErrors: { email: 'invalid' } });
+  }
+  const e164Phone = formatPhone(phone);
+  if (phone && !e164Phone) {
+    return res.status(400).json({ error: 'Checkout failed', detail: 'Please enter a valid phone number.', fieldErrors: { phone: 'invalid' } });
   }
 
-  const account = ACCOUNTS[accountKey];
-  const planVariationId = account.plans[tier];
-  if (!planVariationId) {
-    return res.status(400).json({ error: `Tier "${tier}" not available at ${account.label}` });
-  }
-
-  // Build Square client for the selected location's account
-  let client;
+  let stripe;
   try {
-    client = getClient(accountKey);
+    stripe = getStripe();
   } catch (err) {
-    console.error('[checkout] Client init error:', err.message);
+    console.error('[checkout] Stripe init error:', err.message);
     return res.status(500).json({ error: 'Server configuration error' });
   }
 
-  const e164Phone = formatPhone(phone);
-  console.log('[checkout] Phone input:', phone, '→ e164:', e164Phone);
-  console.log('[checkout] Account:', accountKey, 'location:', account.locationId, 'plan:', planVariationId);
-
   try {
-    // 1. Find existing customer by email, or create a new one
-    let customerId;
-    const searchResult = await client.customers.search({
-      query: { filter: { emailAddress: { exact: email } } },
-    });
-    const existing = searchResult.customers?.[0];
-
-    if (existing) {
-      customerId = existing.id;
-      console.log('[checkout] Found existing customer:', customerId, 'email:', email);
-      const updates = { customerId, note: `home_location:${home_location}` };
-      if (!existing.referenceId) updates.referenceId = tier;
-      await client.customers.update(updates);
-      console.log('[checkout] Updated customer:', { referenceId: updates.referenceId || '(unchanged)', note: updates.note });
-    } else {
-      const customerRequest = {
-        givenName: name.split(' ')[0],
-        familyName: name.split(' ').slice(1).join(' '),
-        emailAddress: email,
-        referenceId: tier,
-        note: `home_location:${home_location}`,
-      };
-      if (e164Phone) customerRequest.phoneNumber = e164Phone;
-
-      const customerResult = await client.customers.create(customerRequest);
-      customerId = customerResult.customer.id;
-      console.log('[checkout] Customer created:', customerId, 'tier:', tier);
+    const prices = await stripe.prices.list({ lookup_keys: [tier], active: true, limit: 1 });
+    const price = prices.data[0];
+    if (!price) {
+      console.error('[checkout] No active Stripe price for tier', tier);
+      return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    // 2. Create a subscription checkout payment link
-    const linkRequest = {
-      idempotencyKey: `${customerId}-${tier}-${Date.now()}`,
-      quickPay: {
-        name: `${tierInfo.name} — First Month`,
-        priceMoney: {
-          amount: BigInt(tierInfo.amount),
-          currency: 'USD',
-        },
-        locationId: account.locationId,
-      },
-      checkoutOptions: {
-        subscriptionPlanId: planVariationId,
-        redirectUrl: `${process.env.NEXT_PUBLIC_SITE_URL}/?welcome=1`,
-        acceptedPaymentMethods: {
-          applePay: true,
-          googlePay: true,
-          cashAppPay: true,
-          afterpayClearpay: false,
-        },
-      },
-      prePopulatedData: {
-        buyerEmail: email,
-        ...(e164Phone && { buyerPhoneNumber: e164Phone }),
-      },
-    };
+    // One Stripe customer per email, so a member who signs up twice is one person.
+    const found = await stripe.customers.list({ email, limit: 1 });
+    const meta = { tier, home_location: loc };
+    const fields = { name, email, metadata: meta, ...(e164Phone && { phone: e164Phone }) };
+    const customer = found.data[0]
+      ? await stripe.customers.update(found.data[0].id, fields)
+      : await stripe.customers.create(fields);
 
-    console.log('Creating payment link:', JSON.stringify(linkRequest, (_, v) =>
-      typeof v === 'bigint' ? v.toString() : v
-    ));
+    const site = process.env.NEXT_PUBLIC_SITE_URL;
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      customer: customer.id,
+      line_items: [{ price: price.id, quantity: 1 }],
+      subscription_data: { metadata: meta },
+      metadata: meta,
+      success_url: `${site}/?welcome=1`,
+      cancel_url: `${site}/`,
+    });
 
-    const checkoutResult = await client.checkout.paymentLinks.create(linkRequest);
-
-    console.log('Payment link created:', checkoutResult.paymentLink?.url);
-
-    res.status(200).json({ url: checkoutResult.paymentLink.url });
+    console.log('[checkout] Session created:', session.id, 'tier:', tier, 'lounge:', loc);
+    res.status(200).json({ url: session.url });
 
   } catch (err) {
-    console.error('[checkout] Square error:', JSON.stringify(err, null, 2));
-    const squareErrors = err.body?.errors || err.errors || [];
-    const statusCode = err.statusCode || 500;
-
-    const fieldErrors = {};
-    let detail = err.message || 'Checkout failed';
-    for (const e of squareErrors) {
-      detail = e.detail || detail;
-      const field = (e.field || '').toLowerCase();
-      if (field.includes('phone')) fieldErrors.phone = e.detail;
-      else if (field.includes('email')) fieldErrors.email = e.detail;
-      else if (field.includes('given_name') || field.includes('family_name')) fieldErrors.name = e.detail;
-    }
-
-    res.status(statusCode >= 400 && statusCode < 500 ? 400 : 500).json({
+    console.error('[checkout] Stripe error:', err.type, err.message);
+    res.status(err.statusCode >= 400 && err.statusCode < 500 ? 400 : 500).json({
       error: 'Checkout failed',
-      detail,
-      fieldErrors: Object.keys(fieldErrors).length > 0 ? fieldErrors : undefined,
+      detail: err.message || 'Checkout failed',
     });
   }
-}
+};

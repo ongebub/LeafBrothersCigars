@@ -1,5 +1,6 @@
 const { createClient } = require('@supabase/supabase-js');
 const { resolveAccount, getClient } = require('./_squareAccounts');
+const { getStripe } = require('./_stripe');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -30,11 +31,13 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'subscriptionId is required' });
   }
 
-  // Look up the member to get home_location for routing + ownership check
+  // Look up the member to get home_location for routing + ownership check.
+  // Stripe subscription ids start sub_; anything else is a Square one.
+  const isStripe = subscriptionId.startsWith('sub_');
   const { data: member, error: lookupErr } = await supabase
     .from('members')
-    .select('home_location, square_subscription_id, email')
-    .eq('square_subscription_id', subscriptionId)
+    .select('home_location, square_subscription_id, stripe_subscription_id, email')
+    .eq(isStripe ? 'stripe_subscription_id' : 'square_subscription_id', subscriptionId)
     .maybeSingle();
 
   if (lookupErr || !member) {
@@ -46,6 +49,19 @@ module.exports = async function handler(req, res) {
   if (!isAdmin && member.email !== userEmail) {
     console.log('[cancel] Non-admin user', userEmail, 'attempted to cancel subscription', subscriptionId, '— denied');
     return res.status(403).json({ error: 'You can only cancel your own subscription' });
+  }
+
+  if (isStripe) {
+    // Ends at the close of the period already paid for, as Square's cancel did.
+    // The webhook marks the row cancelled when Stripe actually ends it.
+    try {
+      console.log('[cancel] Cancelling Stripe subscription:', subscriptionId, 'by:', userEmail, isAdmin ? '(admin)' : '(member)');
+      await getStripe().subscriptions.update(subscriptionId, { cancel_at_period_end: true });
+      return res.status(200).json({ success: true });
+    } catch (err) {
+      console.error('[cancel] Stripe error:', err.message);
+      return res.status(500).json({ error: 'Failed to cancel subscription', detail: err.message });
+    }
   }
 
   // Route to the correct Square account

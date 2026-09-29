@@ -144,7 +144,7 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
       <div class="info-item"><label>Locker Number</label><span>${m.locker_number || 'N/A'}</span></div>
     </div>
     <div class="actions">
-      ${m.status === 'active' && m.square_subscription_id ? '<button class="btn btn-cancel" id="cancelBtn">Cancel Membership</button>' : ''}
+      ${m.status === 'active' && (m.stripe_subscription_id || m.square_subscription_id) ? '<button class="btn btn-cancel" id="cancelBtn">Cancel Membership</button>' : ''}
       <button class="btn btn-logout" id="logoutBtn">Log Out</button>
     </div>
     <div class="msg" id="msg"></div>
@@ -165,7 +165,7 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
             'Content-Type': 'application/json',
             'Authorization': 'Bearer ' + session.access_token,
           },
-          body: JSON.stringify({ subscriptionId: m.square_subscription_id }),
+          body: JSON.stringify({ subscriptionId: m.stripe_subscription_id || m.square_subscription_id }),
         });
         const result = await resp.json();
         if (result.success) {
