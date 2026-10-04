@@ -122,7 +122,12 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
   const email = session.user.email;
 
   // Fetch member record
-  const { data: members, error } = await sb.from('members').select('*').eq('email', email).limit(1);
+  // One person can have more than one row (an old cancelled membership next to
+  // the live one), so take them all and show the best: active first, else newest.
+  const { data: rows, error } = await sb.from('members').select('*').ilike('email', email.replace(/[\\%_]/g, '\\$&'));
+  const members = (rows || []).slice().sort((x, y) =>
+    ((y.status === 'active') - (x.status === 'active')) ||
+    String(y.created_at || '').localeCompare(String(x.created_at || '')));
   console.log('[member] Supabase query result:', { data: members, error, email: session.user.email });
   if (error || !members || members.length === 0) {
     loading.textContent = 'Could not load membership data.';
