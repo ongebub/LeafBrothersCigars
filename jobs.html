@@ -191,6 +191,20 @@
     }
 
     /* FORM */
+    .apply-link {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 12px 22px;
+      background: var(--gold);
+      color: var(--black);
+      font-family: Georgia, serif;
+      font-size: 0.9rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      text-decoration: none;
+    }
+    .apply-link:hover { filter: brightness(1.1); }
+
     .form-section {
       background: var(--surface);
       border-top: 1px solid var(--border);
@@ -426,6 +440,7 @@
     <p class="hero-eyebrow">Careers</p>
     <h1>Join the<br><em>Leaf Brothers</em> Team</h1>
     <p class="hero-sub">We're a premium cigar lounge with two locations in Waukee and Ankeny. We hire people who take pride in what they do and enjoy creating a great experience for our members.</p>
+    <a class="apply-link" href="#apply">Apply Now &rarr;</a>
   </section>
 
   <!-- OPEN POSITIONS -->
@@ -435,23 +450,25 @@
 
       <div class="position-card">
         <h3>Daytime Sales Associate</h3>
-        <span class="badge">Part-Time · Waukee</span>
+        <span class="badge">Part-Time · Waukee &amp; Ankeny</span>
         <p>Monday–Friday, noon to 5 PM. Help members and walk-in customers find the perfect cigar, and keep the lounge stocked, clean, and running smoothly. You're a regular cigar smoker with at least a year of smoking under your belt.</p>
         <p class="pay"><strong>$10/hr</strong> + tips &nbsp;·&nbsp; <strong>30%</strong> employee discount</p>
+        <a class="apply-link" href="#apply" onclick="document.getElementById('position').value='Daytime Sales Associate'">Apply for this job &rarr;</a>
       </div>
 
       <div class="position-card">
         <h3>Evening Sales Associate</h3>
         <span class="badge">Part-Time</span>
-        <p>Evening shifts serving our members and lounge guests. Cigar knowledge is a plus but we're happy to teach the right person.</p>
+        <p>Evening shifts serving our members and lounge guests. You're a regular cigar smoker with at least a year of smoking under your belt.</p>
         <p class="pay"><strong>$10/hr</strong> + tips &nbsp;·&nbsp; <strong>30%</strong> employee discount</p>
+        <a class="apply-link" href="#apply" onclick="document.getElementById('position').value='Evening Sales Associate'">Apply for this job &rarr;</a>
       </div>
 
     </div>
   </section>
 
   <!-- APPLICATION FORM -->
-  <section class="form-section">
+  <section class="form-section" id="apply">
     <div class="form-inner">
       <h2>Apply Now</h2>
       <p class="form-subtitle">Fill out the form below and we'll be in touch if there's a fit.</p>
