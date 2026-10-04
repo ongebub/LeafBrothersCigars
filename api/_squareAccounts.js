@@ -35,7 +35,7 @@ const TIER_PRICES = {
   'select': { name: 'Select Member', amount: 1500 },
   'lounge': { name: 'Lounge Member', amount: 3900 },
   'lounge-premium': { name: 'Lounge Member Premium', amount: 4900 },
-  'half-locker': { name: 'Half Locker Member', amount: 5900 },
+  'half-locker': { name: 'Half Locker Member', amount: 3900 },
   'locker': { name: 'Locker Member', amount: 6900 },
 };
 
