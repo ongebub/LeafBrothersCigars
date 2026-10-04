@@ -732,8 +732,8 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
       <div class="f-group" id="sLocGroup"><label class="f-lbl">Home Location</label>
         <select class="f-input" id="sLoc"><option value="">Select your home lounge</option><option value="Ankeny">Ankeny</option><option value="Waukee">Waukee</option></select>
       </div>
-      <div class="f-group"><label class="f-lbl">Create Password</label><input class="f-input" type="password" id="sPass" placeholder="Min. 8 characters"></div>
-      <p class="f-note">💳 Billing processed securely via Square. You'll be redirected to complete payment after submitting. Cancel anytime from your dashboard.</p>
+      <p class="f-note">🔑 You&rsquo;ll set your member portal password right after payment &mdash; we&rsquo;ll email you a link.</p>
+      <p class="f-note">💳 Billing processed securely via Stripe. You'll be redirected to complete payment after submitting. Cancel anytime from your dashboard.</p>
 
       <div class="tc-box">
         <h4>Leaf Brothers Cigars LLC — Membership Terms &amp; Conditions</h4>
@@ -813,9 +813,11 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
     <h2 class="m-title">Congratulations, you&rsquo;re a member!</h2>
     <div class="gold-bar" style="margin:18px auto 22px;"></div>
     <p style="font-size:1.05rem;color:var(--cream);margin-bottom:14px">Your payment went through and your membership is active. A receipt is on its way to your email.</p>
-    <p style="font-size:1rem;color:var(--muted);margin-bottom:14px">Log in to the member portal any time to see your membership and renewal date. <strong style="color:var(--cream);font-weight:400">First time?</strong> Tap <em>Forgot Password</em> on the login screen and use the email you signed up with to set your password.</p>
+    <p style="font-size:1rem;color:var(--muted);margin-bottom:14px">Log in to the member portal any time to see your membership and renewal date. <strong style="color:var(--cream);font-weight:400">One last step:</strong> set your password. We&rsquo;ll email you a link.</p>
+    <div class="f-group" style="text-align:left"><label class="f-lbl">Email you signed up with</label><input class="f-input" type="email" id="wEmail" placeholder="you@example.com"></div>
+    <button class="m-submit" id="wPwBtn" onclick="sendWelcomePwLink()" style="margin-bottom:10px">Email Me a Link to Set My Password</button>
+    <p id="wPwMsg" style="display:none;font-size:1rem;margin-bottom:14px"></p>
     <p style="font-size:1rem;color:var(--muted);margin-bottom:26px">Your member discount will be on your account at the counter by the next day &mdash; just give them your name or phone number.</p>
-    <a class="m-submit" href="/member" style="display:block;text-decoration:none">Go to the Member Portal &rarr;</a>
     <p style="margin-top:16px;font-size:1rem"><a href="#" onclick="closeModal('welcomeModal');return false" style="color:var(--gold);text-decoration:none">Back to the site</a></p>
   </div>
 </div>
@@ -875,7 +877,7 @@ async function submitSignup(){
       }
       throw new Error(data.detail||data.error||'Something went wrong');
     }
-    sessionStorage.setItem('mName',f+' '+l);sessionStorage.setItem('mTier',cT);sessionStorage.setItem('mPrice',cP);sessionStorage.setItem('loggedIn','true');
+    sessionStorage.setItem('mName',f+' '+l);sessionStorage.setItem('mEmail',e);sessionStorage.setItem('mTier',cT);sessionStorage.setItem('mPrice',cP);sessionStorage.setItem('loggedIn','true');
     window.location.href=data.url;
   }catch(err){
     errEl.textContent=err.message||'Checkout failed. Please try again.';errEl.style.display='block';
@@ -907,6 +909,18 @@ async function submitForgotPassword(){
   if(error){msgEl.textContent=error.message;msgEl.style.color='#c0694a';msgEl.style.display='block';return}
   msgEl.textContent='Check your email for a password reset link.';msgEl.style.color='var(--gold)';msgEl.style.display='block';
 }
+async function sendWelcomePwLink(){
+  const email=document.getElementById('wEmail').value.trim();
+  const msgEl=document.getElementById('wPwMsg'),btn=document.getElementById('wPwBtn');
+  if(!email){showToast('Please enter your email address.');return}
+  btn.disabled=true;btn.textContent='Sending...';
+  const sb=window.supabase.createClient(window.ENV_SUPABASE_URL,window.ENV_SUPABASE_ANON_KEY);
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo:'https://www.leafbrotherscigars.com/member'});
+  btn.disabled=false;btn.textContent='Email Me a Link to Set My Password';
+  msgEl.style.display='block';
+  if(error){msgEl.textContent=error.message+' You can also tap Forgot Password on the login screen later.';msgEl.style.color='#c0694a';return}
+  msgEl.textContent='Sent. Check your email (and spam) for the link, then choose your password.';msgEl.style.color='var(--gold)';
+}
 function loadDashboard(){
   const n=sessionStorage.getItem('mName')||'Member',t=sessionStorage.getItem('mTier')||'Lounge Member',p=sessionStorage.getItem('mPrice')||'39';
   document.getElementById('dashName').textContent=n;document.getElementById('dashTier').textContent=t;
@@ -932,7 +946,7 @@ async function submitContact(){
   }catch(e){showToast('Network error. Please try again.')}
   btn.disabled=false;btn.textContent='Send Message';
 }
-if(new URLSearchParams(window.location.search).get('welcome')==='1'){history.replaceState(null,'','/');window.addEventListener('load',()=>setTimeout(()=>document.getElementById('welcomeModal').classList.add('active'),400))}
+if(new URLSearchParams(window.location.search).get('welcome')==='1'){history.replaceState(null,'','/');window.addEventListener('load',()=>setTimeout(()=>{document.getElementById('wEmail').value=sessionStorage.getItem('mEmail')||'';document.getElementById('welcomeModal').classList.add('active')},400))}
 if(new URLSearchParams(window.location.search).get('login')==='1'){history.replaceState(null,'','/');setTimeout(()=>showLogin(),300)}
 window.addEventListener('load',()=>{if(sessionStorage.getItem('loggedIn')==='true')loadDashboard()});
 </script>
