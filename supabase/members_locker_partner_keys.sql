@@ -1,6 +1,6 @@
 -- Half Locker partner + key return tracking on public.members.
 --
--- NOT RUN YET.  Run this in the Supabase SQL editor BEFORE the code that
+-- Applied 2026-10-13.  It has to exist BEFORE the code that
 -- writes these columns is deployed: api/stripewebhook.js sets them on every
 -- signup and cancellation, and admin.html saves two of them, so with the
 -- columns missing every one of those writes fails.
