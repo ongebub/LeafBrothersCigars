@@ -1,4 +1,8 @@
 {
+  "crons": [
+    { "path": "/api/cron-locker-partner", "schedule": "0 15 * * *" },
+    { "path": "/api/cron-key-fee", "schedule": "15 15 * * *" }
+  ],
   "rewrites": [
     {
       "source": "/admin",

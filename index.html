@@ -767,6 +767,7 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
       <label class="tc-check"><input type="checkbox" class="tc-cb" onchange="checkTC()"> I confirm that I am 21 years of age or older.</label>
       <label class="tc-check"><input type="checkbox" class="tc-cb" onchange="checkTC()"> I understand that no outside cigars or outside alcohol are permitted in the lounge at any time. Violation will result in immediate membership termination with no refund.</label>
       <label class="tc-check"><input type="checkbox" class="tc-cb" onchange="checkTC()"> I have read and agree to the full Leaf Brothers Cigars LLC Membership Terms &amp; Conditions.</label>
+      <label class="tc-check" id="sKeyCheck" style="display:none"><input type="checkbox" id="sKeyCb" onchange="checkTC()"> <span id="sKeyText"></span></label>
 
       <p class="f-error" id="signupError" style="display:none"></p>
       <button class="m-submit" id="signupBtn" onclick="submitSignup()" disabled>Create Account &amp; Continue to Payment →</button>
@@ -850,6 +851,7 @@ let cT='',cP=0;
 function openSignup(t,p){cT=t;cP=p;document.getElementById('mBadge').textContent=t;document.getElementById('mPrice').textContent='$'+p+' / month';document.getElementById('signupForm').style.display='block';document.getElementById('signupSuccess').style.display='none';document.querySelectorAll('.tc-cb').forEach(c=>c.checked=false);document.getElementById('signupBtn').disabled=true;
 document.getElementById('sLocGroup').style.display='';document.getElementById('sLoc').value=''
 const hl=isHalfLocker();document.getElementById('sPartnerNotice').textContent=HALF_LOCKER_NOTICE;document.getElementById('sPartnerNotice').style.display=hl?'':'none';document.getElementById('sPartnerGroup').style.display=hl?'':'none';document.getElementById('sPartner').value='';clearFieldErrors()
+const kc=document.getElementById('sKeyCb'),nk=needsKeyConsent();kc.checked=false;kc.classList.toggle('tc-cb',nk);document.getElementById('sKeyText').textContent=KEY_RETURN_CONSENT;document.getElementById('sKeyCheck').style.display=nk?'':'none'
 document.getElementById('signupModal').classList.add('active')}
 function showLogin(e){if(e)e.preventDefault();document.getElementById('loginModal').classList.add('active')}
 function closeModal(id){document.getElementById(id).classList.remove('active')}
@@ -858,13 +860,18 @@ document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click
 // the locker partner's name.  This is the only copy of the wording -- edit it here.
 const HALF_LOCKER_NOTICE="A Half Locker is a shared locker. Before you sign up, you need to have arranged a locker partner, and your partner has to sign up for their own Half Locker membership too. If your partner hasn't signed up within 30 days, your membership switches to a full Locker at the full Locker rate.";
 function isHalfLocker(){return TIER_MAP[cT]==='half-locker'}
+// Tiers that get a key agree to return it.  The server's list is KEY_TIERS in
+// api/_stripe.js -- keep the two the same.  The wording lives only here.
+const KEY_TIERS=['lounge','lounge-premium','half-locker','locker'];
+const KEY_RETURN_CONSENT="I agree to return my key within 10 days of canceling my membership. If I don't, the card on file will be charged a $15 key replacement fee.";
+function needsKeyConsent(){return KEY_TIERS.includes(TIER_MAP[cT])}
 const TIER_MAP={'Select Member':'select','Lounge Member':'lounge','Lounge Member Premium':'lounge-premium','Half Locker Member':'half-locker','Locker Member':'locker'};
 function checkTC(){const cbs=document.querySelectorAll('.tc-cb');const all=[...cbs].every(c=>c.checked);document.getElementById('signupBtn').disabled=!all}
 function clearFieldErrors(){
   ['sNameErr','sEmailErr','sPhoneErr','sPartnerErr'].forEach(id=>{const el=document.getElementById(id);el.textContent='';el.classList.remove('show')});
 }
 function showFieldError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show')}
-const FIELD_ERROR_MSGS={locker_partner:"Please enter your locker partner's full name.",phone:'Please enter a valid phone number.',email:'Please enter a valid email address.',name:'Please enter a valid name.'};
+const FIELD_ERROR_MSGS={key_fee_agreed:'Please agree to the key return terms.',locker_partner:"Please enter your locker partner's full name.",phone:'Please enter a valid phone number.',email:'Please enter a valid email address.',name:'Please enter a valid name.'};
 async function submitSignup(){
   const f=document.getElementById('sFirst').value,l=document.getElementById('sLast').value,e=document.getElementById('sEmail').value,ph=document.getElementById('sPhone').value,loc=document.getElementById('sLoc').value;
   const errEl=document.getElementById('signupError');errEl.style.display='none';
@@ -872,10 +879,12 @@ async function submitSignup(){
   if(!f||!l||!e||!loc){showToast('Please fill in all required fields.');return}
   const partner=isHalfLocker()?document.getElementById('sPartner').value.trim():'';
   if(isHalfLocker()&&!partner){showFieldError('sPartnerErr',FIELD_ERROR_MSGS.locker_partner);showToast(FIELD_ERROR_MSGS.locker_partner);return}
+  const keyOk=needsKeyConsent()&&document.getElementById('sKeyCb').checked;
+  if(needsKeyConsent()&&!keyOk){showToast(FIELD_ERROR_MSGS.key_fee_agreed);return}
   const btn=document.getElementById('signupBtn');const origText=btn.innerHTML;
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Processing…';
   try{
-    const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f+' '+l,email:e,phone:ph,tier:TIER_MAP[cT]||cT,home_location:loc,...(partner&&{locker_partner:partner})})});
+    const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f+' '+l,email:e,phone:ph,tier:TIER_MAP[cT]||cT,home_location:loc,...(partner&&{locker_partner:partner}),...(keyOk&&{key_fee_agreed:true})})});
     const data=await res.json();
     if(!res.ok){
       if(data.fieldErrors){

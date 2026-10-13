@@ -41,6 +41,13 @@ async function activateFromCheckout(stripe, session) {
     stripe_customer_id: customer.id,
     stripe_subscription_id: sub.id,
     renewal_date: renewalDate(sub),
+    // These ride on the subscription, not the customer (see checkout.js).  A
+    // new membership is a new key, so the old return and cancel dates clear.
+    // Needs supabase/members_locker_partner_keys.sql to have been run.
+    locker_partner: sub.metadata.locker_partner || null,
+    key_fee_agreed_at: sub.metadata.key_fee_agreed_at || null,
+    key_returned_at: null,
+    cancelled_at: null,
   };
 
   const { data: existing, error: findErr } = await supabase
@@ -73,9 +80,17 @@ async function activateFromCheckout(stripe, session) {
 }
 
 async function syncSubscription(sub) {
+  const fields = { status: normalizeStatus(sub.status), renewal_date: renewalDate(sub) };
+  // The day the membership actually ended -- with cancel_at_period_end that is
+  // the end of the paid period, not the day they clicked cancel.  The 10 days
+  // to bring the key back count from here.
+  if (fields.status === 'cancelled') {
+    const ended = sub.ended_at || sub.canceled_at;
+    fields.cancelled_at = (ended ? new Date(ended * 1000) : new Date()).toISOString();
+  }
   const { error } = await supabase
     .from('members')
-    .update({ status: normalizeStatus(sub.status), renewal_date: renewalDate(sub) })
+    .update(fields)
     .eq('stripe_subscription_id', sub.id);
   if (error) throw new Error('members update: ' + error.message);
   console.log('[stripewebhook] Subscription', sub.id, '->', sub.status);

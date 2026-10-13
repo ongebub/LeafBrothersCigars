@@ -11,6 +11,10 @@ const Stripe = require('stripe');
 const TIERS = ['select', 'lounge', 'lounge-premium', 'half-locker', 'locker'];
 const LOCATIONS = ['Ankeny', 'Waukee', 'Both'];
 
+// Tiers that are handed a door key.  Signing up for one of these means
+// agreeing to the key-return terms (see checkout.js).
+const KEY_TIERS = ['lounge', 'lounge-premium', 'half-locker', 'locker'];
+
 let client = null;
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not set');
@@ -43,4 +47,4 @@ function renewalDate(sub) {
   return end ? new Date(end * 1000).toISOString().split('T')[0] : null;
 }
 
-module.exports = { TIERS, LOCATIONS, getStripe, normalizeStatus, renewalDate };
+module.exports = { TIERS, LOCATIONS, KEY_TIERS, getStripe, normalizeStatus, renewalDate };
