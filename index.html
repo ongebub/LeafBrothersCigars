@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<script>if(location.hash==='#membership'&&!location.search)location.replace('/join')</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Leaf Brothers Cigars — The Ultimate Lounge Experience</title>
 <link rel="icon" type="image/png" href="/favicon.png">
@@ -947,6 +948,8 @@ async function submitContact(){
   btn.disabled=false;btn.textContent='Send Message';
 }
 if(new URLSearchParams(window.location.search).get('welcome')==='1'){history.replaceState(null,'','/');window.addEventListener('load',()=>setTimeout(()=>{document.getElementById('wEmail').value=sessionStorage.getItem('mEmail')||'';document.getElementById('welcomeModal').classList.add('active')},400))}
+const JOIN_TIERS={'select':['Select Member',15],'lounge':['Lounge Member',39],'lounge-premium':['Lounge Member Premium',49],'half-locker':['Half Locker Member',39],'locker':['Locker Member',69]};
+{const jt=JOIN_TIERS[new URLSearchParams(window.location.search).get('join')];if(jt){history.replaceState(null,'','/');window.addEventListener('load',()=>{document.getElementById('membership').scrollIntoView();openSignup(jt[0],jt[1])})}}
 if(new URLSearchParams(window.location.search).get('login')==='1'){history.replaceState(null,'','/');setTimeout(()=>showLogin(),300)}
 window.addEventListener('load',()=>{if(sessionStorage.getItem('loggedIn')==='true')loadDashboard()});
 </script>
