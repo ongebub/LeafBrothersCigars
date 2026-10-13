@@ -12,10 +12,18 @@ function formatPhone(raw) {
   return null;
 }
 
+// Half Locker is a shared locker, so that tier (and only that tier) has to name
+// the locker partner.  Returns the cleaned name, or null if there isn't one.
+const PARTNER_MAX = 80;
+function cleanPartner(raw) {
+  if (typeof raw !== 'string') return null;
+  return raw.replace(/\s+/g, ' ').trim().slice(0, PARTNER_MAX).trim() || null;
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { tier, name, email, phone, home_location } = req.body || {};
+  const { tier, name, email, phone, home_location, locker_partner } = req.body || {};
 
   if (!TIERS.includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
   const loc = LOCATIONS.find(l => l.toLowerCase() === String(home_location || '').trim().toLowerCase());
@@ -26,6 +34,11 @@ module.exports = async function handler(req, res) {
   const e164Phone = formatPhone(phone);
   if (phone && !e164Phone) {
     return res.status(400).json({ error: 'Checkout failed', detail: 'Please enter a valid phone number.', fieldErrors: { phone: 'invalid' } });
+  }
+
+  const partner = tier === 'half-locker' ? cleanPartner(locker_partner) : null;
+  if (tier === 'half-locker' && !partner) {
+    return res.status(400).json({ error: 'Checkout failed', detail: "Please enter your locker partner's full name.", fieldErrors: { locker_partner: 'required' } });
   }
 
   let stripe;
@@ -52,13 +65,17 @@ module.exports = async function handler(req, res) {
       ? await stripe.customers.update(found.data[0].id, fields)
       : await stripe.customers.create(fields);
 
+    // The partner belongs to this subscription, not to the person: it stays off
+    // the customer record so a later signup on another tier can't inherit it.
+    const subMeta = partner ? { ...meta, locker_partner: partner } : meta;
+
     const site = process.env.NEXT_PUBLIC_SITE_URL;
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       customer: customer.id,
       line_items: [{ price: price.id, quantity: 1 }],
-      subscription_data: { metadata: meta },
-      metadata: meta,
+      subscription_data: { metadata: subMeta },
+      metadata: subMeta,
       success_url: `${site}/?welcome=1`,
       cancel_url: `${site}/`,
     });

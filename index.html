@@ -721,6 +721,7 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
       <span class="m-badge" id="mBadge">Select Member</span>
       <h2 class="m-title">Join the Brotherhood</h2>
       <p class="m-price" id="mPrice">$15 / month</p>
+      <div class="tc-box" id="sPartnerNotice" style="display:none;margin:0 0 18px"></div>
       <div class="f-row">
         <div class="f-group"><label class="f-lbl">First Name</label><input class="f-input" type="text" id="sFirst" placeholder="Chris"></div>
         <div class="f-group"><label class="f-lbl">Last Name</label><input class="f-input" type="text" id="sLast" placeholder="Thompson"></div>
@@ -731,6 +732,7 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
       <div class="f-group" id="sLocGroup"><label class="f-lbl">Home Location</label>
         <select class="f-input" id="sLoc"><option value="">Select your home lounge</option><option value="Ankeny">Ankeny</option><option value="Waukee">Waukee</option></select>
       </div>
+      <div class="f-group" id="sPartnerGroup" style="display:none"><label class="f-lbl">Who are you sharing with? (locker partner's full name)</label><input class="f-input" type="text" id="sPartner" maxlength="80" placeholder="First &amp; last name"><span class="f-field-error" id="sPartnerErr"></span></div>
       <p class="f-note">🔑 You&rsquo;ll set your member portal password right after payment &mdash; we&rsquo;ll email you a link.</p>
       <p class="f-note">💳 Billing processed securely via Stripe. You'll be redirected to complete payment after submitting. Cancel anytime from your dashboard.</p>
 
@@ -847,32 +849,40 @@ document.querySelectorAll('.fi').forEach(el=>obs.observe(el));
 let cT='',cP=0;
 function openSignup(t,p){cT=t;cP=p;document.getElementById('mBadge').textContent=t;document.getElementById('mPrice').textContent='$'+p+' / month';document.getElementById('signupForm').style.display='block';document.getElementById('signupSuccess').style.display='none';document.querySelectorAll('.tc-cb').forEach(c=>c.checked=false);document.getElementById('signupBtn').disabled=true;
 document.getElementById('sLocGroup').style.display='';document.getElementById('sLoc').value=''
+const hl=isHalfLocker();document.getElementById('sPartnerNotice').textContent=HALF_LOCKER_NOTICE;document.getElementById('sPartnerNotice').style.display=hl?'':'none';document.getElementById('sPartnerGroup').style.display=hl?'':'none';document.getElementById('sPartner').value='';clearFieldErrors()
 document.getElementById('signupModal').classList.add('active')}
 function showLogin(e){if(e)e.preventDefault();document.getElementById('loginModal').classList.add('active')}
 function closeModal(id){document.getElementById(id).classList.remove('active')}
 document.querySelectorAll('.modal-overlay').forEach(o=>o.addEventListener('click',function(e){if(e.target===this)this.classList.remove('active')}));
+// Half Locker is a shared locker: the signup form shows this notice and asks for
+// the locker partner's name.  This is the only copy of the wording -- edit it here.
+const HALF_LOCKER_NOTICE="A Half Locker is a shared locker. Before you sign up, you need to have arranged a locker partner, and your partner has to sign up for their own Half Locker membership too. If your partner hasn't signed up within 30 days, your membership switches to a full Locker at the full Locker rate.";
+function isHalfLocker(){return TIER_MAP[cT]==='half-locker'}
 const TIER_MAP={'Select Member':'select','Lounge Member':'lounge','Lounge Member Premium':'lounge-premium','Half Locker Member':'half-locker','Locker Member':'locker'};
 function checkTC(){const cbs=document.querySelectorAll('.tc-cb');const all=[...cbs].every(c=>c.checked);document.getElementById('signupBtn').disabled=!all}
 function clearFieldErrors(){
-  ['sNameErr','sEmailErr','sPhoneErr'].forEach(id=>{const el=document.getElementById(id);el.textContent='';el.classList.remove('show')});
+  ['sNameErr','sEmailErr','sPhoneErr','sPartnerErr'].forEach(id=>{const el=document.getElementById(id);el.textContent='';el.classList.remove('show')});
 }
 function showFieldError(id,msg){const el=document.getElementById(id);el.textContent=msg;el.classList.add('show')}
-const FIELD_ERROR_MSGS={phone:'Please enter a valid phone number.',email:'Please enter a valid email address.',name:'Please enter a valid name.'};
+const FIELD_ERROR_MSGS={locker_partner:"Please enter your locker partner's full name.",phone:'Please enter a valid phone number.',email:'Please enter a valid email address.',name:'Please enter a valid name.'};
 async function submitSignup(){
   const f=document.getElementById('sFirst').value,l=document.getElementById('sLast').value,e=document.getElementById('sEmail').value,ph=document.getElementById('sPhone').value,loc=document.getElementById('sLoc').value;
   const errEl=document.getElementById('signupError');errEl.style.display='none';
   clearFieldErrors();
   if(!f||!l||!e||!loc){showToast('Please fill in all required fields.');return}
+  const partner=isHalfLocker()?document.getElementById('sPartner').value.trim():'';
+  if(isHalfLocker()&&!partner){showFieldError('sPartnerErr',FIELD_ERROR_MSGS.locker_partner);showToast(FIELD_ERROR_MSGS.locker_partner);return}
   const btn=document.getElementById('signupBtn');const origText=btn.innerHTML;
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Processing…';
   try{
-    const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f+' '+l,email:e,phone:ph,tier:TIER_MAP[cT]||cT,home_location:loc})});
+    const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f+' '+l,email:e,phone:ph,tier:TIER_MAP[cT]||cT,home_location:loc,...(partner&&{locker_partner:partner})})});
     const data=await res.json();
     if(!res.ok){
       if(data.fieldErrors){
         if(data.fieldErrors.phone)showFieldError('sPhoneErr',FIELD_ERROR_MSGS.phone);
         if(data.fieldErrors.email)showFieldError('sEmailErr',FIELD_ERROR_MSGS.email);
         if(data.fieldErrors.name)showFieldError('sNameErr',FIELD_ERROR_MSGS.name);
+        if(data.fieldErrors.locker_partner)showFieldError('sPartnerErr',FIELD_ERROR_MSGS.locker_partner);
       }
       throw new Error(data.detail||data.error||'Something went wrong');
     }
