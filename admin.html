@@ -444,6 +444,12 @@
     border: 1px solid rgba(255,209,102,0.25);
   }
   .status-suspended::before { background: var(--yellow-light); }
+  .status-lapsed {
+    color: var(--yellow-light);
+    background: rgba(255,209,102,0.1);
+    border: 1px solid rgba(255,209,102,0.25);
+  }
+  .status-lapsed::before { background: var(--yellow-light); }
 
   .locker-val {
     font-family: 'Cinzel', serif;
@@ -681,6 +687,10 @@
         <span class="stat-l">Cancelled</span>
       </div>
       <div class="stat-card suspended">
+        <span class="stat-n" id="stat-lapsed">—</span>
+        <span class="stat-l">Lapsed</span>
+      </div>
+      <div class="stat-card suspended">
         <span class="stat-n" id="stat-suspended">—</span>
         <span class="stat-l">Suspended</span>
       </div>
@@ -700,6 +710,7 @@
         <option value="">All Statuses</option>
         <option value="active">Active</option>
         <option value="cancelled">Cancelled</option>
+        <option value="lapsed">Lapsed</option>
         <option value="suspended">Suspended</option>
       </select>
       <select id="filter-tier" class="filter-select" onchange="renderTable()">
@@ -778,7 +789,9 @@
         <label class="field-label">Status</label>
         <select id="f-status" class="field-select">
           <option value="active">Active</option>
+          <option value="lapsed">Lapsed</option>
           <option value="suspended">Suspended</option>
+          <option value="cancelled">Cancelled</option>
         </select>
       </div>
     </div>
@@ -821,7 +834,7 @@
     </div>
 
     <div id="cancel-sub-section" style="display:none; margin-top:16px; padding:14px; border:1px solid rgba(181,69,27,0.3); background:rgba(181,69,27,0.06);">
-      <button id="cancel-sub-btn" style="width:100%; padding:10px; background:rgba(181,69,27,0.15); color:#c0694a; border:1px solid rgba(181,69,27,0.35); font-family:'Cinzel',serif; font-size:16px; letter-spacing:0.15em; text-transform:uppercase; cursor:pointer;" onclick="cancelSubscription()">Cancel Square Subscription</button>
+      <button id="cancel-sub-btn" style="width:100%; padding:10px; background:rgba(181,69,27,0.15); color:#c0694a; border:1px solid rgba(181,69,27,0.35); font-family:'Cinzel',serif; font-size:16px; letter-spacing:0.15em; text-transform:uppercase; cursor:pointer;" onclick="cancelSubscription()">Cancel Stripe Subscription</button>
     </div>
 
     <div class="modal-actions">
@@ -925,6 +938,7 @@ function updateStats() {
   document.getElementById('stat-total').textContent = allMembers.length;
   document.getElementById('stat-active').textContent = allMembers.filter(m => m.status === 'active').length;
   document.getElementById('stat-cancelled').textContent = allMembers.filter(m => m.status === 'cancelled').length;
+  document.getElementById('stat-lapsed').textContent = allMembers.filter(m => m.status === 'lapsed').length;
   document.getElementById('stat-suspended').textContent = allMembers.filter(m => m.status === 'suspended').length;
   document.getElementById('stat-lockers').textContent = allMembers.filter(m => m.locker_number).length;
 }
@@ -974,7 +988,7 @@ function renderTable() {
       <td class="phone">${esc(m.phone || '—')}</td>
       <td>${m.home_location ? `<span class="loc-badge loc-${m.home_location.toLowerCase()}">${esc(m.home_location)}</span>` : '—'}</td>
       <td><span class="tier-badge">${TIER_LABELS[m.tier] || esc(m.tier) || '—'}</span>${m.locker_partner ? `<div class="locker-none">with ${esc(m.locker_partner)}</div>` : ''}</td>
-      <td><span class="status-badge status-${m.status || 'active'}">${m.status || 'active'}</span>${m.status === 'cancelled' && keyNote(m) ? `<div class="locker-none">${esc(keyNote(m))}</div>` : ''}</td>
+      <td><span class="status-badge status-${m.status || 'active'}">${m.status || 'active'}</span>${m.status === 'cancelled' && keyNote(m) ? `<div class="locker-none">${esc(keyNote(m))}</div>` : ''}${m.status === 'active' && !m.stripe_subscription_id ? '<div class="locker-none">No Stripe membership</div>' : ''}</td>
       <td>${m.locker_number ? `<span class="locker-val">${esc(m.locker_number)}</span>` : '<span class="locker-none">—</span>'}</td>
       <td>${fmtDate(m.join_date)}</td>
       <td>${fmtDate(m.renewal_date)}</td>
@@ -1044,8 +1058,9 @@ function openEditModal(id) {
   document.getElementById('f-partner').value = m.locker_partner || '';
   document.getElementById('f-key-returned').checked = !!m.key_returned_at;
   document.getElementById('f-key-note').textContent = keyNote(m) || (m.key_fee_agreed_at ? '' : 'No key agreement on file');
-  // Show cancel button only for active members with a subscription (Stripe since 2026-09-29, or Square)
-  const showCancel = (m.stripe_subscription_id || m.square_subscription_id) && m.status === 'active';
+  // Stripe is the only membership billing since 2026-10-14; every Square
+  // subscription was cancelled on 2026-10-13.
+  const showCancel = m.stripe_subscription_id && m.status === 'active';
   document.getElementById('cancel-sub-section').style.display = showCancel ? 'block' : 'none';
   document.getElementById('member-modal').classList.add('open');
 }
@@ -1096,7 +1111,7 @@ async function saveMember() {
 }
 
 async function cancelSubscription() {
-  if (!editingMember || !(editingMember.stripe_subscription_id || editingMember.square_subscription_id)) return;
+  if (!editingMember || !editingMember.stripe_subscription_id) return;
   const name = editingMember.name || 'this member';
   if (!confirm(`Cancel ${name}'s subscription?\n\nThey will keep access until the end of their current billing period, then billing will stop. This cannot be undone from the admin UI.`)) return;
 
@@ -1112,22 +1127,22 @@ async function cancelSubscription() {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ' + session.access_token,
       },
-      body: JSON.stringify({ subscriptionId: editingMember.stripe_subscription_id || editingMember.square_subscription_id }),
+      body: JSON.stringify({ subscriptionId: editingMember.stripe_subscription_id }),
     });
     const result = await resp.json();
     if (result.success) {
       closeModal();
-      showToast('Subscription cancelled. Square webhook will update status shortly.');
+      showToast('Subscription set to end at the close of the paid period. Stripe will update the status then.');
       await loadMembers();
     } else {
       showToast('Cancel failed: ' + (result.detail || result.error));
       btn.disabled = false;
-      btn.textContent = 'Cancel Square Subscription';
+      btn.textContent = 'Cancel Stripe Subscription';
     }
   } catch (e) {
     showToast('Network error cancelling subscription.');
     btn.disabled = false;
-    btn.textContent = 'Cancel Square Subscription';
+    btn.textContent = 'Cancel Stripe Subscription';
   }
 }
 
