@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
   // Recorded, not required -- a page loaded before these popups shipped must
   // still be able to check out.  Only plain values are kept.  The rules go to
   // every tier with lounge access, which is the same list as KEY_TIERS.
-  const rulesAck = KEY_TIERS.includes(tier) && typeof rules_ack === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rules_ack) ? rules_ack : null;
+  const rulesAck = KEY_TIERS.includes(tier) && typeof rules_ack === 'string' && /^\d{4}-\d{2}-\d{2}[a-z]?$/.test(rules_ack) ? rules_ack : null;
   const ankenyAck = /locker/.test(tier) && (loc === 'Ankeny' || loc === 'Both') && ankeny_locker_ack === true;
 
   let stripe;
