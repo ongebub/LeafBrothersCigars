@@ -259,6 +259,11 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
 .tc-box::-webkit-scrollbar-thumb{background:rgba(201,168,76,.25);border-radius:3px}
 .tc-check{display:flex;align-items:flex-start;gap:10px;margin-top:12px;font-size:1rem;color:rgba(245,237,214,.8);line-height:1.5;cursor:pointer}
 .tc-check input[type="checkbox"]{margin-top:3px;accent-color:var(--gold);flex-shrink:0}
+.ack-modal{max-width:500px}
+.ack-notice{font-family:'Cormorant Garamond',serif;font-size:1.35rem;line-height:1.55;color:var(--cream);background:rgba(201,168,76,.06);border-left:2px solid var(--gold);padding:16px 18px;margin:6px 0 4px}
+.ack-intro{font-size:1rem;color:var(--muted);line-height:1.6;margin-bottom:6px}
+.ack-modal .tc-check{padding:10px 12px;margin-top:10px;background:rgba(10,8,4,.45);border:1px solid rgba(201,168,76,.12)}
+.ack-modal .tc-check input[type="checkbox"]{width:18px;height:18px}
 .m-success{text-align:center;padding:14px 0}
 .s-icon{font-size:2.8rem;margin-bottom:16px;display:block}
 .s-title{font-family:'Cormorant Garamond',serif;font-size:1.9rem;margin-bottom:11px}
@@ -730,7 +735,7 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
       <div class="f-group"><label class="f-lbl">Email Address</label><input class="f-input" type="email" id="sEmail" placeholder="you@example.com"><span class="f-field-error" id="sEmailErr"></span></div>
       <div class="f-group"><label class="f-lbl">Phone Number</label><input class="f-input" type="tel" id="sPhone" placeholder="(515) 555-0100"><span class="f-field-error" id="sPhoneErr"></span></div>
       <div class="f-group" id="sLocGroup"><label class="f-lbl">Home Location</label>
-        <select class="f-input" id="sLoc"><option value="">Select your home lounge</option><option value="Ankeny">Ankeny</option><option value="Waukee">Waukee</option></select>
+        <select class="f-input" id="sLoc" onchange="onLocChange()"><option value="">Select your home lounge</option><option value="Ankeny">Ankeny</option><option value="Waukee">Waukee</option></select>
       </div>
       <div class="f-group" id="sPartnerGroup" style="display:none"><label class="f-lbl">Who are you sharing with? (locker partner's full name)</label><input class="f-input" type="text" id="sPartner" maxlength="80" placeholder="First &amp; last name"><span class="f-field-error" id="sPartnerErr"></span></div>
       <p class="f-note">🔑 You&rsquo;ll set your member portal password right after payment &mdash; we&rsquo;ll email you a link.</p>
@@ -778,6 +783,29 @@ footer{background:var(--dark2);border-top:1px solid rgba(201,168,76,.12);padding
       <p class="s-text">Account created. In the live version you'll be redirected to Square to complete your first monthly payment. Check your email for confirmation.</p>
       <button class="btn-gold" style="margin-top:26px;width:100%" onclick="closeAndLogin()">Go to Member Dashboard</button>
     </div>
+  </div>
+</div>
+
+<!-- ANKENY LOCKER NOTICE: locker tiers whose lounge is Ankeny (or Both) acknowledge this before payment -->
+<div class="modal-overlay" id="ankenyLockerModal">
+  <div class="modal ack-modal" role="dialog" aria-modal="true" aria-labelledby="ankTitle">
+    <button class="m-close" onclick="closeModal('ankenyLockerModal')" aria-label="Close">×</button>
+    <span class="m-badge">Ankeny Lockers</span>
+    <h2 class="m-title" id="ankTitle">Please Note</h2>
+    <p class="ack-notice" id="ankNoticeText"></p>
+    <button class="m-submit" id="ankAckBtn" onclick="ackAnkenyLocker()">I Understand</button>
+  </div>
+</div>
+
+<!-- MEMBER RULES: every tier with lounge access ticks each rule before payment -->
+<div class="modal-overlay" id="rulesModal">
+  <div class="modal ack-modal" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <button class="m-close" onclick="closeModal('rulesModal')" aria-label="Close">×</button>
+    <span class="m-badge">Lounge Members</span>
+    <h2 class="m-title" id="rulesTitle">Member Rules</h2>
+    <p class="ack-intro">The short version of our Terms. Please tick each one to continue.</p>
+    <div id="rulesList"></div>
+    <button class="m-submit" id="rulesBtn" onclick="ackRules()" disabled>Continue to Payment →</button>
   </div>
 </div>
 
@@ -849,7 +877,7 @@ const obs=new IntersectionObserver(e=>{e.forEach(x=>{if(x.isIntersecting){x.targ
 document.querySelectorAll('.fi').forEach(el=>obs.observe(el));
 let cT='',cP=0;
 function openSignup(t,p){cT=t;cP=p;document.getElementById('mBadge').textContent=t;document.getElementById('mPrice').textContent='$'+p+' / month';document.getElementById('signupForm').style.display='block';document.getElementById('signupSuccess').style.display='none';document.querySelectorAll('.tc-cb').forEach(c=>c.checked=false);document.getElementById('signupBtn').disabled=true;
-document.getElementById('sLocGroup').style.display='';document.getElementById('sLoc').value=''
+document.getElementById('sLocGroup').style.display='';document.getElementById('sLoc').value='';ankenyAcked=false;rulesAcked=false
 const hl=isHalfLocker();document.getElementById('sPartnerNotice').textContent=HALF_LOCKER_NOTICE;document.getElementById('sPartnerNotice').style.display=hl?'':'none';document.getElementById('sPartnerGroup').style.display=hl?'':'none';document.getElementById('sPartner').value='';clearFieldErrors()
 const kc=document.getElementById('sKeyCb'),nk=needsKeyConsent();kc.checked=false;kc.classList.toggle('tc-cb',nk);document.getElementById('sKeyText').textContent=KEY_RETURN_CONSENT;document.getElementById('sKeyCheck').style.display=nk?'':'none'
 document.getElementById('signupModal').classList.add('active')}
@@ -866,6 +894,36 @@ const KEY_TIERS=['lounge','lounge-premium','half-locker','locker'];
 const KEY_RETURN_CONSENT="I agree to return my key within 10 days of canceling my membership. If I don't, the card on file will be charged a $15 key replacement fee.";
 function needsKeyConsent(){return KEY_TIERS.includes(TIER_MAP[cT])}
 const TIER_MAP={'Select Member':'select','Lounge Member':'lounge','Lounge Member Premium':'lounge-premium','Half Locker Member':'half-locker','Locker Member':'locker'};
+// Ankeny's lockers sit in the humidor until the new locker room is finished.
+// Locker tiers whose lounge is Ankeny (or Both) acknowledge this before payment.
+// Take it out, or change the wording, here -- this is the only copy.
+const ANKENY_LOCKER_NOTICE="At Ankeny, lockers are currently located in the humidor until our new locker room is finished.";
+function isLockerTier(){return /locker/i.test(cT)||/locker/.test(TIER_MAP[cT]||'')}
+function needsAnkenyNotice(loc){return isLockerTier()&&(loc==='Ankeny'||loc==='Both')}
+// Member rules: the short version of the Terms, each one ticked on its own.
+// Every tier with lounge access (all but Select) sees them.  Bump RULES_VERSION
+// when the wording changes -- it is what lands in Stripe as rules_ack.
+const RULES_VERSION='2026-10-23';
+const RULES_TIERS=['lounge','lounge-premium','half-locker','locker'];
+const MEMBER_RULES=[
+  'I will not bring outside alcohol into the lounge.',
+  'I will not bring guests, other than my spouse.',
+  'I understand it is disrespectful to bring in cigars purchased elsewhere.',
+  'I am responsible for any damage I cause while in the lounge.',
+  'I must be out of the lounge between 2:00 and 6:00 a.m. (liquor license requirement).'
+];
+function needsRules(){return RULES_TIERS.includes(TIER_MAP[cT])}
+let ankenyAcked=false,rulesAcked=false,ankFromSubmit=false;
+function showAnkenyNotice(fromSubmit){ankFromSubmit=!!fromSubmit;document.getElementById('ankNoticeText').textContent=ANKENY_LOCKER_NOTICE;document.getElementById('ankenyLockerModal').classList.add('active')}
+function onLocChange(){if(!ankenyAcked&&needsAnkenyNotice(document.getElementById('sLoc').value))showAnkenyNotice()}
+function ackAnkenyLocker(){ankenyAcked=true;closeModal('ankenyLockerModal');if(ankFromSubmit){ankFromSubmit=false;submitSignup()}}
+function showRules(){
+  const box=document.getElementById('rulesList');box.innerHTML='';
+  MEMBER_RULES.forEach(r=>{const l=document.createElement('label');l.className='tc-check';const c=document.createElement('input');c.type='checkbox';c.className='rule-cb';c.onchange=checkRules;l.appendChild(c);l.appendChild(document.createTextNode(' '+r));box.appendChild(l)});
+  checkRules();document.getElementById('rulesModal').classList.add('active')}
+function allRulesTicked(){const cbs=[...document.querySelectorAll('#rulesList .rule-cb')];return cbs.length===MEMBER_RULES.length&&cbs.every(c=>c.checked)}
+function checkRules(){document.getElementById('rulesBtn').disabled=!allRulesTicked()}
+function ackRules(){if(!allRulesTicked())return;rulesAcked=true;closeModal('rulesModal');submitSignup()}
 function checkTC(){const cbs=document.querySelectorAll('.tc-cb');const all=[...cbs].every(c=>c.checked);document.getElementById('signupBtn').disabled=!all}
 function clearFieldErrors(){
   ['sNameErr','sEmailErr','sPhoneErr','sPartnerErr'].forEach(id=>{const el=document.getElementById(id);el.textContent='';el.classList.remove('show')});
@@ -881,10 +939,12 @@ async function submitSignup(){
   if(isHalfLocker()&&!partner){showFieldError('sPartnerErr',FIELD_ERROR_MSGS.locker_partner);showToast(FIELD_ERROR_MSGS.locker_partner);return}
   const keyOk=needsKeyConsent()&&document.getElementById('sKeyCb').checked;
   if(needsKeyConsent()&&!keyOk){showToast(FIELD_ERROR_MSGS.key_fee_agreed);return}
+  if(needsAnkenyNotice(loc)&&!ankenyAcked){showAnkenyNotice(true);return}
+  if(needsRules()&&!rulesAcked){showRules();return}
   const btn=document.getElementById('signupBtn');const origText=btn.innerHTML;
   btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Processing…';
   try{
-    const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f+' '+l,email:e,phone:ph,tier:TIER_MAP[cT]||cT,home_location:loc,...(partner&&{locker_partner:partner}),...(keyOk&&{key_fee_agreed:true})})});
+    const res=await fetch('/api/checkout',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:f+' '+l,email:e,phone:ph,tier:TIER_MAP[cT]||cT,home_location:loc,...(partner&&{locker_partner:partner}),...(keyOk&&{key_fee_agreed:true}),...(needsRules()&&rulesAcked&&{rules_ack:RULES_VERSION}),...(needsAnkenyNotice(loc)&&ankenyAcked&&{ankeny_locker_ack:true})})});
     const data=await res.json();
     if(!res.ok){
       if(data.fieldErrors){

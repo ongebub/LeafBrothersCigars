@@ -23,7 +23,7 @@ function cleanPartner(raw) {
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { tier, name, email, phone, home_location, locker_partner, key_fee_agreed } = req.body || {};
+  const { tier, name, email, phone, home_location, locker_partner, key_fee_agreed, rules_ack, ankeny_locker_ack } = req.body || {};
 
   if (!TIERS.includes(tier)) return res.status(400).json({ error: 'Invalid tier' });
   const loc = LOCATIONS.find(l => l.toLowerCase() === String(home_location || '').trim().toLowerCase());
@@ -47,6 +47,14 @@ module.exports = async function handler(req, res) {
   if (needsKeyConsent && key_fee_agreed !== true) {
     return res.status(400).json({ error: 'Checkout failed', detail: 'Please agree to the key return terms.', fieldErrors: { key_fee_agreed: 'required' } });
   }
+
+  // Proof of the signup popups (index.html): which version of the member rules
+  // they ticked, and that an Ankeny locker member saw the humidor notice.
+  // Recorded, not required -- a page loaded before these popups shipped must
+  // still be able to check out.  Only plain values are kept.  The rules go to
+  // every tier with lounge access, which is the same list as KEY_TIERS.
+  const rulesAck = KEY_TIERS.includes(tier) && typeof rules_ack === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(rules_ack) ? rules_ack : null;
+  const ankenyAck = /locker/.test(tier) && (loc === 'Ankeny' || loc === 'Both') && ankeny_locker_ack === true;
 
   let stripe;
   try {
@@ -78,6 +86,8 @@ module.exports = async function handler(req, res) {
     const extra = {
       ...(partner && { locker_partner: partner }),
       ...(needsKeyConsent && { key_fee_agreed_at: new Date().toISOString() }),
+      ...(rulesAck && { rules_ack: rulesAck, rules_ack_at: new Date().toISOString() }),
+      ...(ankenyAck && { ankeny_locker_notice_at: new Date().toISOString() }),
     };
     const subMeta = Object.keys(extra).length ? { ...meta, ...extra } : meta;
 
