@@ -1,5 +1,5 @@
 const { createClient } = require('@supabase/supabase-js');
-const { getStripe, normalizeStatus, renewalDate } = require('./_stripe');
+const { getStripe, normalizeStatus, renewalDate, tierOf } = require('./_stripe');
 
 // No hyphen in this route's name on purpose: a hyphenated Stripe webhook URL
 // failed on the English All Stars site and nobody found out why.
@@ -81,6 +81,12 @@ async function activateFromCheckout(stripe, session) {
 
 async function syncSubscription(sub) {
   const fields = { status: normalizeStatus(sub.status), renewal_date: renewalDate(sub) };
+  // Follow the price: an upgrade (api/upgrade.js) swaps the subscription's
+  // price, and this is what keeps the row's tier in step with what they pay.
+  const tier = tierOf(sub);
+  if (tier) fields.tier = tier;
+  if (sub.metadata?.locker_partner) fields.locker_partner = sub.metadata.locker_partner;
+  if (sub.metadata?.key_fee_agreed_at) fields.key_fee_agreed_at = sub.metadata.key_fee_agreed_at;
   // The day the membership actually ended -- with cancel_at_period_end that is
   // the end of the paid period, not the day they clicked cancel.  The 10 days
   // to bring the key back count from here.

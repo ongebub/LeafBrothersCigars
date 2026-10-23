@@ -15,6 +15,19 @@ const LOCATIONS = ['Ankeny', 'Waukee', 'Both'];
 // agreeing to the key-return terms (see checkout.js).
 const KEY_TIERS = ['lounge', 'lounge-premium', 'half-locker', 'locker'];
 
+// What members see.  Same names as the signup buttons on index.html.
+const TIER_NAMES = {
+  select: 'Select Member',
+  lounge: 'Lounge Member',
+  'lounge-premium': 'Lounge Member Premium',
+  'half-locker': 'Half Locker Member',
+  locker: 'Locker Member',
+};
+
+// The member-rules version a key tier ticks (index.html RULES_VERSION).  The
+// upgrade route insists on exactly this one; bump both together.
+const RULES_VERSION = '2026-10-23b';
+
 let client = null;
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not set');
@@ -47,4 +60,14 @@ function renewalDate(sub) {
   return end ? new Date(end * 1000).toISOString().split('T')[0] : null;
 }
 
-module.exports = { TIERS, LOCATIONS, KEY_TIERS, getStripe, normalizeStatus, renewalDate };
+// The tier a subscription is actually paying for: the price's lookup_key,
+// falling back to the tier recorded in metadata (a price whose lookup_key was
+// transferred to a newer price keeps billing, but no longer carries the key).
+function tierOf(sub) {
+  const key = sub?.items?.data?.[0]?.price?.lookup_key;
+  if (TIERS.includes(key)) return key;
+  const meta = sub?.metadata?.tier;
+  return TIERS.includes(meta) ? meta : null;
+}
+
+module.exports = { TIERS, LOCATIONS, KEY_TIERS, TIER_NAMES, RULES_VERSION, getStripe, normalizeStatus, renewalDate, tierOf };

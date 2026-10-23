@@ -39,6 +39,33 @@ body{background:var(--dark1);color:var(--cream);font-family:'Raleway',sans-serif
 .btn-gold{background:var(--gold);color:var(--dark1);font-weight:700}
 .btn-gold:hover{background:#e0b84e}
 .btn-gold:disabled{opacity:.4;cursor:not-allowed}
+.btn-upgrade{background:rgba(201,168,76,.14);color:var(--gold);border:1px solid rgba(201,168,76,.45)}
+.btn-upgrade:hover{background:rgba(201,168,76,.26)}
+.shop-note{margin-top:18px;font-size:.95rem;color:var(--muted);font-family:'Cormorant Garamond',serif;font-style:italic}
+.up-overlay{position:fixed;inset:0;background:rgba(5,4,2,.82);display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto;z-index:50}
+.up-overlay.active{display:flex}
+.up-modal{position:relative;max-width:520px;width:100%;background:var(--dark2);border:1px solid rgba(201,168,76,.25);border-radius:16px;padding:36px 28px 28px;text-align:left;margin:auto 0}
+.up-close{position:absolute;top:10px;right:14px;background:none;border:none;color:var(--muted);font-size:1.8rem;cursor:pointer;line-height:1}
+.up-close:hover{color:var(--gold)}
+.up-modal h2{font-family:'Cinzel',serif;color:var(--gold);font-size:1.3rem;margin-bottom:6px;text-align:center}
+.up-sub{font-family:'Cormorant Garamond',serif;color:var(--muted);font-size:1.05rem;text-align:center;margin-bottom:22px}
+.up-opt{display:flex;align-items:center;gap:14px;width:100%;padding:16px 18px;margin-bottom:12px;background:rgba(10,8,4,.5);border:1px solid rgba(201,168,76,.18);border-radius:10px;color:var(--cream);font-family:'Raleway',sans-serif;font-size:1rem;cursor:pointer;text-align:left;transition:border-color .2s,background .2s}
+.up-opt:hover{border-color:var(--gold);background:rgba(201,168,76,.07)}
+.up-opt .nm{flex:1;font-weight:600}
+.up-opt .pr{font-family:'Cormorant Garamond',serif;font-size:1.35rem;color:var(--gold);white-space:nowrap}
+.up-opt .pr small{font-size:.85rem;color:var(--muted)}
+.up-opt .due{display:block;font-weight:400;font-size:.88rem;color:var(--muted);margin-top:3px}
+.up-lbl{display:block;font-size:.9rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin:16px 0 6px}
+.up-input{width:100%;padding:12px 14px;background:var(--dark1);border:1px solid rgba(201,168,76,.2);border-radius:8px;color:var(--cream);font-family:'Raleway',sans-serif;font-size:1rem;outline:none}
+.up-input:focus{border-color:var(--gold)}
+.up-notice{font-family:'Cormorant Garamond',serif;font-size:1.2rem;line-height:1.5;color:var(--cream);background:rgba(201,168,76,.06);border-left:2px solid var(--gold);padding:12px 16px;margin:14px 0 4px}
+.up-check{display:flex;align-items:flex-start;gap:10px;margin-top:10px;padding:10px 12px;font-size:1rem;line-height:1.5;color:rgba(245,237,214,.85);background:rgba(10,8,4,.45);border:1px solid rgba(201,168,76,.12);border-radius:6px;cursor:pointer}
+.up-check input{margin-top:3px;width:18px;height:18px;accent-color:var(--gold);flex-shrink:0}
+.up-sum{margin:20px 0 4px;padding:14px 16px;border:1px solid rgba(201,168,76,.2);border-radius:8px;font-size:1rem;line-height:1.6}
+.up-sum b{color:var(--gold);font-weight:600}
+.up-actions{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+.up-actions .btn{flex:1;min-width:140px}
+@media(max-width:520px){.portal{padding:36px 20px}.info-grid{grid-template-columns:1fr}.up-modal{padding:32px 18px 22px}}
 </style>
 </head>
 <body>
@@ -47,9 +74,33 @@ body{background:var(--dark1);color:var(--cream);font-family:'Raleway',sans-serif
   <p class="loading" id="loading">Loading your membership...</p>
 </div>
 
+<div class="up-overlay" id="upOverlay" role="dialog" aria-modal="true" aria-labelledby="upTitle">
+  <div class="up-modal">
+    <button class="up-close" id="upClose" aria-label="Close">&times;</button>
+    <div id="upBody"></div>
+  </div>
+</div>
+
 <script>
 window.ENV_SUPABASE_URL = 'https://afvnjekuiyhtjubphnuc.supabase.co';
 window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmdm5qZWt1aXlodGp1YnBobnVjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyNDc1NjMsImV4cCI6MjA4ODgyMzU2M30.Z_D-uWotbQs37oHSidZdgKlZjJqr6v4-i4e-1jbyQNE';
+</script>
+<script>
+// Signup wording, copied verbatim from index.html.  If it changes there, change
+// it here too (and RULES_VERSION in api/_stripe.js).
+const TIER_NAMES={'select':'Select Member','lounge':'Lounge Member','lounge-premium':'Lounge Member Premium','half-locker':'Half Locker Member','locker':'Locker Member'};
+const KEY_TIERS=['lounge','lounge-premium','half-locker','locker'];
+const KEY_RETURN_CONSENT="I agree to return my key within 10 days of canceling my membership. If I don't, the card on file will be charged a $15 key replacement fee.";
+const HALF_LOCKER_NOTICE="A Half Locker is a shared locker. Before you sign up, you need to have arranged a locker partner, and your partner has to sign up for their own Half Locker membership too. If your partner hasn't signed up within 30 days, your membership switches to a full Locker at the full Locker rate.";
+const ANKENY_LOCKER_NOTICE="At Ankeny, lockers are currently located in the humidor until our new locker room is finished.";
+const RULES_VERSION='2026-10-23b';
+const MEMBER_RULES=[
+  'I will not bring outside alcohol into the lounge.',
+  'I will not bring guests, other than my spouse.',
+  'I will not bring in cigars purchased elsewhere. It is not allowed and is disrespectful to the lounge.',
+  'I am responsible for any damage I cause in the lounge, and it will be charged to my card on file.',
+  'I must be out of the lounge between 2:00 and 6:00 a.m. (liquor license requirement).'
+];
 </script>
 <script>
 (async function() {
@@ -136,6 +187,9 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
 
   const m = members[0];
 
+  // Upgrade is for Stripe-billed memberships below the top tier.  Square
+  // (legacy) members are pointed to the shop instead.
+  const canUpgrade = m.status === 'active' && !!m.stripe_subscription_id && m.tier !== 'locker';
   const statusClass = m.status === 'active' ? 'active' : m.status === 'cancelled' ? 'cancelled' : 'default';
 
   portal.innerHTML = `
@@ -144,14 +198,16 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
     <span class="badge ${statusClass}">${m.status || 'Unknown'}</span>
     <div class="info-grid">
       <div class="info-item"><label>Name</label><span>${m.name || 'N/A'}</span></div>
-      <div class="info-item"><label>Tier</label><span>${m.tier || 'N/A'}</span></div>
-      <div class="info-item"><label>Renewal Date</label><span>${m.renewal_date || 'N/A'}</span></div>
+      <div class="info-item"><label>Tier</label><span id="tierText">${TIER_NAMES[m.tier] || m.tier || 'N/A'}</span></div>
+      <div class="info-item"><label>Renewal Date</label><span id="renewText">${m.renewal_date || 'N/A'}</span></div>
       <div class="info-item"><label>Locker Number</label><span>${m.locker_number || 'N/A'}</span></div>
     </div>
     <div class="actions">
+      ${canUpgrade ? '<button class="btn btn-upgrade" id="upgradeBtn">Upgrade</button>' : ''}
       ${m.status === 'active' && (m.stripe_subscription_id || m.square_subscription_id) ? '<button class="btn btn-cancel" id="cancelBtn">Cancel Membership</button>' : ''}
       <button class="btn btn-logout" id="logoutBtn">Log Out</button>
     </div>
+    ${m.status === 'active' && !m.stripe_subscription_id && m.square_subscription_id ? '<p class="shop-note">To upgrade your membership, please contact the shop.</p>' : ''}
     <div class="msg" id="msg"></div>
   `;
 
@@ -190,6 +246,164 @@ window.ENV_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJ
         cancelBtn.textContent = 'Cancel Membership';
       }
     });
+  }
+
+
+  // ── Upgrade ──
+  const upgradeBtn = document.getElementById('upgradeBtn');
+  if (upgradeBtn) upgradeBtn.addEventListener('click', openUpgrade);
+  document.getElementById('upClose').addEventListener('click', closeUpgrade);
+  document.getElementById('upOverlay').addEventListener('click', e => { if (e.target.id === 'upOverlay') closeUpgrade(); });
+
+  const upBody = document.getElementById('upBody');
+  let upData = null, upBusy = false;
+
+  function closeUpgrade() { if (!upBusy) document.getElementById('upOverlay').classList.remove('active'); }
+  function usd(cents) { return '$' + (cents / 100).toFixed(cents % 100 ? 2 : 0); }
+  function usd2(cents) { return '$' + (cents / 100).toFixed(2); }
+  function esc(t) { const d = document.createElement('div'); d.textContent = t == null ? '' : String(t); return d.innerHTML; }
+
+  async function openUpgrade() {
+    document.getElementById('upOverlay').classList.add('active');
+    upBody.innerHTML = '<h2 id="upTitle">Upgrade Membership</h2><p class="up-sub">Loading your options…</p>';
+    try {
+      const resp = await fetch('/api/upgrade?subscriptionId=' + encodeURIComponent(m.stripe_subscription_id), {
+        headers: { 'Authorization': 'Bearer ' + session.access_token },
+      });
+      const data = await resp.json();
+      if (!resp.ok) { showUpError(data.detail || data.error || 'Could not load upgrade options.'); return; }
+      upData = data;
+      showPicker();
+    } catch (e) {
+      showUpError('Network error. Please try again.');
+    }
+  }
+
+  function showUpError(text) {
+    upBody.innerHTML = '<h2 id="upTitle">Upgrade Membership</h2><div class="msg error" style="display:block">' + esc(text) + '</div>' +
+      '<div class="up-actions"><button class="btn btn-logout" id="upDone">Close</button></div>';
+    document.getElementById('upDone').onclick = closeUpgrade;
+  }
+
+  function showPicker() {
+    const d = upData;
+    if (!d.options.length) {
+      upBody.innerHTML = '<h2 id="upTitle">Upgrade Membership</h2><p class="up-sub">You’re already on our top membership. Thank you!</p>' +
+        '<div class="up-actions"><button class="btn btn-logout" id="upDone">Close</button></div>';
+      document.getElementById('upDone').onclick = closeUpgrade;
+      return;
+    }
+    upBody.innerHTML = '<h2 id="upTitle">Upgrade Membership</h2>' +
+      '<p class="up-sub">You’re a ' + esc(d.current.name) + ' at ' + usd(d.current.monthly) + '/month. Choose your new membership:</p>' +
+      d.options.map((o, i) =>
+        '<button class="up-opt" data-i="' + i + '"><span class="nm">' + esc(o.name) +
+        (o.due_now != null ? '<span class="due">About ' + usd2(o.due_now) + ' today, then ' + usd(o.monthly) + '/month</span>' : '') +
+        '</span><span class="pr">' + usd(o.monthly) + '<small> /mo</small></span></button>').join('') +
+      '<p class="shop-note" style="text-align:center">Your renewal date stays the same. To downgrade or change lounges, please contact the shop.</p>';
+    upBody.querySelectorAll('.up-opt').forEach(b => b.onclick = () => showDetails(d.options[+b.dataset.i]));
+  }
+
+  function showDetails(o) {
+    const d = upData;
+    const r = o.requires;
+    const needLoc = !d.home_location;
+    let h = '<h2 id="upTitle">' + esc(o.name) + '</h2><p class="up-sub">' + usd(o.monthly) + ' / month</p>';
+    if (needLoc) {
+      h += '<label class="up-lbl" for="upLoc">Home Location</label><select class="up-input" id="upLoc">' +
+        '<option value="">Select your home lounge</option><option value="Ankeny">Ankeny</option><option value="Waukee">Waukee</option></select>';
+    }
+    if (r.locker_partner) {
+      h += '<p class="up-notice">' + esc(HALF_LOCKER_NOTICE) + '</p>' +
+        '<label class="up-lbl" for="upPartner">Who are you sharing with? (locker partner’s full name)</label>' +
+        '<input class="up-input" type="text" id="upPartner" maxlength="80" placeholder="First &amp; last name">';
+    }
+    h += '<div id="upAnkeny"></div>';
+    if (r.rules) {
+      h += '<label class="up-lbl">Member Rules</label><p class="shop-note" style="margin-top:0">The short version of our Terms. Please tick each one to continue.</p>' +
+        MEMBER_RULES.map(t => '<label class="up-check"><input type="checkbox" class="up-cb up-rule"> ' + esc(t) + '</label>').join('');
+    }
+    if (r.key_fee_agreed) {
+      h += '<label class="up-check"><input type="checkbox" class="up-cb" id="upKey"> ' + esc(KEY_RETURN_CONSENT) + '</label>';
+    }
+    h += '<div class="up-sum">' + (o.due_now != null
+        ? 'Your card on file will be charged about <b>' + usd2(o.due_now) + '</b> today'
+        : 'Your card on file will be charged the prorated difference today') +
+      ' for the rest of this billing period, then <b>' + usd(o.monthly) + '/month</b>' +
+      (d.renewal_date ? ' from ' + esc(d.renewal_date) : '') + '.</div>' +
+      '<div class="msg" id="upMsg"></div>' +
+      '<div class="up-actions"><button class="btn btn-logout" id="upBack">Back</button>' +
+      '<button class="btn btn-gold" id="upGo">Upgrade Now</button></div>';
+    upBody.innerHTML = h;
+
+    const loc = () => d.home_location || (document.getElementById('upLoc') || {}).value || '';
+    const ankenyNeeded = () => r.ankeny_notice_if_ankeny && (loc() === 'Ankeny' || loc() === 'Both');
+    const box = document.getElementById('upAnkeny');
+    function renderAnkeny() {
+      if (ankenyNeeded()) {
+        if (!document.getElementById('upAnk')) {
+          box.innerHTML = '<p class="up-notice">' + esc(ANKENY_LOCKER_NOTICE) + '</p>' +
+            '<label class="up-check"><input type="checkbox" class="up-cb" id="upAnk"> I understand</label>';
+          document.getElementById('upAnk').onchange = check;
+        }
+      } else box.innerHTML = '';
+    }
+    function check() {
+      const all = [...upBody.querySelectorAll('.up-cb')].every(c => c.checked);
+      const partnerOk = !r.locker_partner || document.getElementById('upPartner').value.trim();
+      document.getElementById('upGo').disabled = !(all && partnerOk && loc());
+    }
+    upBody.querySelectorAll('.up-cb').forEach(c => c.onchange = check);
+    if (r.locker_partner) document.getElementById('upPartner').oninput = check;
+    if (needLoc) document.getElementById('upLoc').onchange = () => { renderAnkeny(); check(); };
+    renderAnkeny(); check();
+    document.getElementById('upBack').onclick = showPicker;
+    document.getElementById('upGo').onclick = () => submitUpgrade(o, loc(), ankenyNeeded());
+  }
+
+  async function submitUpgrade(o, loc, ankeny) {
+    const r = o.requires;
+    const go = document.getElementById('upGo'), back = document.getElementById('upBack'), msg = document.getElementById('upMsg');
+    msg.className = 'msg'; msg.style.display = 'none';
+    go.disabled = true; back.disabled = true; go.textContent = 'Upgrading…'; upBusy = true;
+    const body = {
+      subscriptionId: m.stripe_subscription_id,
+      tier: o.tier,
+      ...(!upData.home_location && { home_location: loc }),
+      ...(r.locker_partner && { locker_partner: document.getElementById('upPartner').value.trim() }),
+      ...(r.key_fee_agreed && { key_fee_agreed: document.getElementById('upKey').checked === true }),
+      ...(r.rules && [...upBody.querySelectorAll('.up-rule')].every(c => c.checked) && { rules_ack: RULES_VERSION }),
+      ...(ankeny && { ankeny_locker_ack: document.getElementById('upAnk').checked === true }),
+    };
+    try {
+      const resp = await fetch('/api/upgrade', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + session.access_token },
+        body: JSON.stringify(body),
+      });
+      const data = await resp.json();
+      upBusy = false;
+      if (!resp.ok || !data.success) {
+        msg.className = 'msg error';
+        msg.textContent = data.detail || data.error || 'The upgrade didn’t go through. Your membership was not changed.';
+        go.disabled = false; back.disabled = false; go.textContent = 'Upgrade Now';
+        return;
+      }
+      m.tier = data.tier;
+      document.getElementById('tierText').textContent = data.name;
+      if (data.renewal_date) document.getElementById('renewText').textContent = data.renewal_date;
+      if (data.tier === 'locker' && upgradeBtn) upgradeBtn.remove();
+      upBody.innerHTML = '<h2 id="upTitle">Welcome Up!</h2><p class="up-sub">You’re now a ' + esc(data.name) + '.</p>' +
+        '<div class="up-sum">' + (data.charged_now != null ? 'We charged <b>' + usd2(data.charged_now) + '</b> to your card on file for the rest of this billing period. ' : '') +
+        'From your next renewal it’s <b>' + usd(data.monthly) + '/month</b>.' +
+        (KEY_TIERS.includes(data.tier) ? ' Stop by the shop to pick up your key.' : '') + '</div>' +
+        '<div class="up-actions"><button class="btn btn-gold" id="upDone">Done</button></div>';
+      document.getElementById('upDone').onclick = closeUpgrade;
+    } catch (e) {
+      upBusy = false;
+      msg.className = 'msg error';
+      msg.textContent = 'Network error. Please refresh the page to check whether your upgrade went through before trying again.';
+      back.disabled = false; go.textContent = 'Upgrade Now';
+    }
   }
 
   // Logout button
