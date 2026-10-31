@@ -535,9 +535,33 @@
   }
 
   const READS_NEEDED = 3;
+  const CAM_IDLE_MS = 2 * 60 * 1000;   // let the camera go after this long between scans
+  let camBusy = false, camPaused = false, camDone = false, camSeen = '', camHits = 0, camIdle = null;
 
   // ---- camera (html5-qrcode: zxing under the hood, works on iPhone Safari)
-  async function startCam() {
+  let camWatch = null;
+  async function startCam(retry) {
+    if (camBusy) return;
+    camBusy = true;
+    try { await startCamInner(retry); } finally { camBusy = false; }
+  }
+  async function startCamInner(retry) {
+    // Already open and paused from the last scan: just pick back up.  Reopening
+    // the camera for every scan is what ran the phone out of room.
+    if (scanner && camPaused) {
+      clearTimeout(camIdle);
+      camDone = false; camSeen = ''; camHits = 0;
+      $('camWrap').classList.remove('hidden');
+      const v = $('reader').querySelector('video');
+      try {
+        if (v) await v.play();
+        scanner.resume();
+        camPaused = false;
+        watchCam(retry);
+        return;
+      } catch (e) { /* fall through and open it fresh */ }
+    }
+    await stopCam();
     if (typeof Html5Qrcode === 'undefined') return note('msg', 'bad', 'Camera scanner did not load. Type the barcode instead.');
     $('camWrap').classList.remove('hidden');
     scanner = new Html5Qrcode('reader', {
@@ -545,7 +569,7 @@
       formatsToSupport: FORMATS(),
       experimentalFeatures: { useBarCodeDetectorIfSupported: true },
     });
-    let done = false, seen = '', hits = 0;
+    camDone = false; camSeen = ''; camHits = 0; camPaused = false;
     try {
       await scanner.start({ facingMode: 'environment' },
         { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.9), height: Math.floor(Math.min(h * 0.5, w * 0.45)) }),
@@ -553,18 +577,21 @@
           // where the lens can actually focus.
           videoConstraints: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
         (text) => {
-          if (done) return;
+          if (camDone) return;
           // A blurry frame can read as a different, valid barcode (2026-10-31:
           // 680226075466 came back 380126075466), so one read isn't enough.
-          hits = text === seen ? hits + 1 : 1;
-          seen = text;
-          if (hits < READS_NEEDED) return;
-          done = true;
+          camHits = text === camSeen ? camHits + 1 : 1;
+          camSeen = text;
+          if (camHits < READS_NEEDED) return;
+          camDone = true;
           if (navigator.vibrate) navigator.vibrate(80);
-          stopCam().then(() => { $('barcode').value = text; lookup(text); });
+          pauseCam();
+          $('barcode').value = text;
+          lookup(text);
         },
         () => {});
       setUpCamTools();
+      watchCam(retry);
     } catch (e) {
       $('camWrap').classList.add('hidden');
       note('msg', 'bad', 'Camera would not start: ' + (e && e.message ? e.message : e) +
@@ -572,11 +599,57 @@
       scanner = null;
     }
   }
+  // html5-qrcode leaves its <video> holding the stream after stop.  Every scan
+  // used to strand one, and after a dozen or so the phone's camera went blank
+  // (2026-10-31; the test browser crashed at about 15).  Let go of it by hand.
+  function releaseVideo(v) {
+    if (!v) return;
+    try {
+      if (v.srcObject) v.srcObject.getTracks().forEach((t) => t.stop());
+      v.pause();
+      v.srcObject = null;
+      v.load();
+      v.remove();
+    } catch (e) {}
+  }
+  function pauseCam() {
+    clearTimeout(camWatch);
+    try { scanner.pause(true); camPaused = true; } catch (e) { stopCam(); return; }
+    $('camWrap').classList.add('hidden');
+    clearTimeout(camIdle);
+    camIdle = setTimeout(stopCam, CAM_IDLE_MS);
+  }
   async function stopCam() {
-    if (scanner) { try { await scanner.stop(); scanner.clear(); } catch (e) {} scanner = null; }
+    clearTimeout(camWatch);
+    clearTimeout(camIdle);
+    camPaused = false;
+    const s = scanner;
+    scanner = null;
+    const v = $('reader').querySelector('video');
+    if (s) { try { await s.stop(); } catch (e) {} }
+    releaseVideo(v);
+    if (s) { try { s.clear(); } catch (e) {} }
+    $('reader').innerHTML = '';
+    $('camTools').innerHTML = '';
+    $('camTools').classList.add('hidden');
     $('camWrap').classList.add('hidden');
   }
-  $('camGo').onclick = startCam;
+
+  // A camera that started but shows nothing: restart it once, then say so.
+  function watchCam(retry) {
+    clearTimeout(camWatch);
+    const v = $('reader').querySelector('video');
+    const was = v ? v.currentTime : 0;
+    camWatch = setTimeout(async () => {
+      const now = $('reader').querySelector('video');
+      if (!scanner || camPaused || (now && now.videoWidth > 0 && now.currentTime > was)) return;
+      await stopCam();
+      if (retry) return startCam(false);
+      note('msg', 'bad', 'The camera is showing blank. Close the app and reopen it, or use Take a photo of the barcode.');
+    }, 4000);
+  }
+
+  $('camGo').onclick = () => startCam(true);
   $('camStop').onclick = stopCam;
 
   // ---- this phone's recent entries
