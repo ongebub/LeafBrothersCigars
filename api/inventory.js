@@ -79,7 +79,8 @@ module.exports = async function handler(req, res) {
         await call('inventory_verify', { p_code: code });
         const shop = needShop(body.shop);
         const matches = await cat.lookupBarcode(shop, body.barcode);
-        return res.json({ matches });
+        const near = matches.length ? [] : await cat.nearBarcodes(shop, body.barcode);
+        return res.json({ matches, near });
       }
 
       // Name search for sticks with no barcode.

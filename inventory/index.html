@@ -149,6 +149,8 @@
     <div class="card hidden" id="unknown">
       <div class="big">Barcode not in Square</div>
       <div class="meta" id="uCode"></div>
+      <div class="msg warn">Check that number against the label. If they're different, the camera misread it: hit Cancel and scan again.</div>
+      <div id="uNear"></div>
       <label for="uText">What cigar is it? (brand, line, size)</label>
       <input id="uText" autocomplete="off" placeholder="e.g. Plasencia Alma Fuerte Robusto">
       <label for="uPhoto">Photo (optional)</label>
@@ -302,10 +304,20 @@
     setTimeout(() => $('cCount').focus(), 50);
   }
 
-  function showUnknown(code) {
+  function showUnknown(code, near) {
     $('scanCard').classList.add('hidden');
     $('confirm').classList.add('hidden');
     $('uCode').textContent = 'Scanned: ' + code;
+    $('uNear').innerHTML = '';
+    if (near && near.length) {
+      const h = document.createElement('label');
+      h.textContent = 'Is it one of these? Their barcodes are almost the same.';
+      $('uNear').appendChild(h);
+      const list = document.createElement('div');
+      // Picked from the catalog, so the entry keeps Square's code, not the misread.
+      pickList(list, near, (r) => { lastBarcode = r.sku || r.upc; showConfirm(r); });
+      $('uNear').appendChild(list);
+    }
     $('unknown').classList.remove('hidden');
     setTimeout(() => $('uText').focus(), 50);
   }
@@ -329,13 +341,13 @@
     lastBarcode = code;
     note('msg', '', '');
     try {
-      const { matches } = await api('lookup', { shop: get('shop'), barcode: code });
+      const { matches, near } = await api('lookup', { shop: get('shop'), barcode: code });
       if (matches.length === 1) return showConfirm(matches[0]);
       if (matches.length > 1) {
         note('msg', 'warn', 'That barcode is on more than one item. Pick the right one.');
         return pickList($('results'), matches, showConfirm);
       }
-      showUnknown(code);
+      showUnknown(code, near);
     } catch (e) { note('msg', 'bad', e.message); }
   }
 
@@ -522,6 +534,8 @@
     if (box.children.length) box.classList.remove('hidden');
   }
 
+  const READS_NEEDED = 3;
+
   // ---- camera (html5-qrcode: zxing under the hood, works on iPhone Safari)
   async function startCam() {
     if (typeof Html5Qrcode === 'undefined') return note('msg', 'bad', 'Camera scanner did not load. Type the barcode instead.');
@@ -531,7 +545,7 @@
       formatsToSupport: FORMATS(),
       experimentalFeatures: { useBarCodeDetectorIfSupported: true },
     });
-    let done = false;
+    let done = false, seen = '', hits = 0;
     try {
       await scanner.start({ facingMode: 'environment' },
         { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.9), height: Math.floor(Math.min(h * 0.5, w * 0.45)) }),
@@ -539,7 +553,13 @@
           // where the lens can actually focus.
           videoConstraints: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
         (text) => {
-          if (done) return; done = true;
+          if (done) return;
+          // A blurry frame can read as a different, valid barcode (2026-10-31:
+          // 680226075466 came back 380126075466), so one read isn't enough.
+          hits = text === seen ? hits + 1 : 1;
+          seen = text;
+          if (hits < READS_NEEDED) return;
+          done = true;
           if (navigator.vibrate) navigator.vibrate(80);
           stopCam().then(() => { $('barcode').value = text; lookup(text); });
         },

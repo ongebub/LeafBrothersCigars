@@ -114,6 +114,28 @@ async function lookupBarcode(shop, code) {
   return found.map(publicRec);
 }
 
+// Catalog barcodes a scanned code is one or two digits off.  A misread still
+// passes the barcode's check digit, so this is how one gets caught.
+async function nearBarcodes(shop, code, limit = 5) {
+  const cat = await loadCatalog(shop);
+  const c = normCode(code);
+  if (c.length < 8) return [];
+  const found = [];
+  for (const r of cat.variations) {
+    let best = 3;
+    for (const raw of [r.sku, r.upc]) {
+      const k = normCode(raw);
+      if (k.length !== c.length) continue;
+      let d = 0;
+      for (let i = 0; i < k.length && d < 3; i++) if (k[i] !== c[i]) d++;
+      if (d < best) best = d;
+    }
+    if (best <= 2) found.push({ r, d: best });
+  }
+  found.sort((a, b) => a.d - b.d);
+  return found.slice(0, limit).map((f) => publicRec(f.r));
+}
+
 async function findVariation(shop, variationId) {
   const cat = await loadCatalog(shop);
   const r = cat.variations.find((v) => v.variation_id === variationId);
@@ -180,4 +202,4 @@ function describe(list) {
   return list.map((s) => `${s.r.item_name} / ${s.r.variation_name}`).join('; ') || 'none';
 }
 
-module.exports = { loadCatalog, lookupBarcode, findVariation, searchByName, confidentMatch, tokens };
+module.exports = { loadCatalog, lookupBarcode, nearBarcodes, findVariation, searchByName, confidentMatch, tokens };
