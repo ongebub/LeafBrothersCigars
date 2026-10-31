@@ -48,8 +48,15 @@
     border: 1px solid var(--line); margin: 6px 0; font-weight: 400; }
   .pick b { display: block; }
   .pick span { color: var(--accent); }
-  #reader { width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
-  #reader video { width: 100% !important; height: auto !important; }
+  #reader { position: relative; width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
+  #reader video { display: block; width: 100%; height: auto; max-height: 55vh; object-fit: cover; }
+  #camGuide { position: absolute; left: 5%; width: 90%; top: 50%; transform: translateY(-50%);
+    border: 2px solid var(--accent); border-radius: 8px; box-shadow: 0 0 0 999px rgba(0,0,0,.3); pointer-events: none; }
+  #camTools { flex-wrap: wrap; }
+  #camTools button { white-space: nowrap; }
+  #camFocus > * { flex: 0 0 auto; }
+  #camFocus input { flex: 1 1 0; min-width: 0; padding: 0; background: none; border: 0; }
+  #camInfo { white-space: pre-line; font-size: 12px; }
   .entry { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
   .entry:first-child { border-top: 0; }
   .entry .n { font-size: 22px; font-weight: 700; min-width: 3ch; text-align: right; }
@@ -111,8 +118,10 @@
       <div style="margin-top:10px"><button id="camGo" class="ghost" style="width:100%">Scan with camera</button></div>
       <div id="camWrap" class="hidden" style="margin-top:10px">
         <div id="reader"></div>
-        <div class="meta" style="margin-top:6px">Small barcode? Hold the phone about 6 inches back and zoom in. Tap the picture to refocus.</div>
+        <div class="meta" style="margin-top:6px">Put the barcode in the box from about 6 inches back. It can be small; it just has to be sharp. Focus resets every few seconds, or tap the picture.</div>
         <div id="camTools" class="row hidden" style="margin-top:8px"></div>
+        <div id="camFocus" class="row hidden" style="margin-top:8px"></div>
+        <div id="camInfo" class="meta"></div>
         <div style="margin-top:8px"><button id="camStop" class="ghost small">Stop camera</button></div>
       </div>
       <div style="margin-top:10px">
@@ -169,7 +178,6 @@
   </section>
 </main>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
 <script>
 (function () {
   'use strict';
@@ -196,7 +204,6 @@
   let lastBarcode = '';    // what was scanned, for the record
   let photoData = null;
   let photoBarcode = '';   // a barcode read off the no-barcode photo, if any
-  let scanner = null;
 
   async function api(action, payload) {
     const r = await fetch('/api/inventory', {
@@ -444,23 +451,20 @@
     if (code && $('cPhoto').files[0] === f) photoBarcode = code;
   });
 
-  const FORMATS = () => {
-    const F = Html5QrcodeSupportedFormats;
-    return [F.UPC_A, F.UPC_E, F.EAN_13, F.EAN_8, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE];
-  };
-
   // A photo from the phone's own camera app, which focuses far better up close
   // than a live web video can.  Read with zxing-wasm, loaded only when a photo is
   // taken: html5-qrcode's decoder read nothing when a label sat on a dark box
   // (tested 2026-10-31, at any size), and this one reads those, small or sideways.
+  const ZXING_URL = 'https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/es/reader/index.js';
+  const ZX_OPTS = {
+    formats: ['UPC-A', 'UPC-E', 'EAN-13', 'EAN-8', 'Code128', 'Code39', 'ITF', 'QRCode'],
+    tryHarder: true, maxNumberOfSymbols: 1,
+  };
   let zxing = null;
   async function readBarcodeFile(file) {
     try {
-      if (!zxing) zxing = await import('https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/es/reader/index.js');
-      const found = await zxing.readBarcodes(file, {
-        formats: ['UPC-A', 'UPC-E', 'EAN-13', 'EAN-8', 'Code128', 'Code39', 'ITF', 'QRCode'],
-        tryHarder: true, maxNumberOfSymbols: 1,
-      });
+      if (!zxing) zxing = await import(ZXING_URL);
+      const found = await zxing.readBarcodes(file, ZX_OPTS);
       if (!found.length) return '';
       // A UPC comes back as a 13-digit EAN with a leading zero; keep the UPC.
       const text = found[0].text;
@@ -481,40 +485,244 @@
     lookup(code);
   });
 
-  // ---- camera tools: only what this phone's camera says it can do
-  function camTrack() {
-    const v = $('reader').querySelector('video');
-    return v && v.srcObject ? v.srcObject.getVideoTracks()[0] : null;
+  // ---- live camera: our own stream and decoder.
+  // html5-qrcode shrank each frame to the on-screen box before decoding it (about
+  // 350 pixels wide on a phone), so a 1080p camera was thrown away and a barcode
+  // had to fill the box, closer than the lens can focus.  This reads the real
+  // video pixels, so a small code can be read from far enough back to be sharp.
+  const READS_NEEDED = 3;
+  const CAM_IDLE_MS = 2 * 60 * 1000;   // let the camera go after this long between scans
+  const SWEEP_MS = 3000;               // how often to force a new focus sweep
+  const IS_ANDROID = /Android/i.test(navigator.userAgent);
+  const WANT = { width: { ideal: 1920 }, height: { ideal: 1080 } };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const normCode = (t) => (/^0\d{12}$/.test(t) ? t.slice(1) : t);   // a UPC read as a 13-digit EAN
+
+  let camStream = null, camVideo = null, camGuide = null, camBusy = false, camGen = 0;
+  let camPaused = false, camDone = false, camSeen = '', camHits = 0, camLastHit = 0;
+  let camIdle = null, camWatch = null, camLoop = null, camTimer = null, camLoopId = 0;
+  let camDecoding = false, camFrameAt = -1, camZxTick = 0;
+  let camCaps = {}, camFocusModes = [], camManual = false, camLastSweep = 0, camPoi = false;
+  let camWanted = {}, camApplyQ = Promise.resolve(), camApplyWaiting = false;
+  let camLenses = [], camLensId = null;
+
+  function camTrack() { return camStream ? camStream.getVideoTracks()[0] : null; }
+  function camLive() { const t = camTrack(); return !!t && t.readyState === 'live'; }
+
+  // ---- decoding: the phone's built-in reader when it has one, zxing-wasm otherwise
+  const camCanvas = document.createElement('canvas');
+  const camCtx = camCanvas.getContext('2d', { willReadFrequently: true });
+  const NATIVE_FORMATS = ['upc_a', 'upc_e', 'ean_13', 'ean_8', 'code_128', 'code_39', 'itf', 'qr_code'];
+  let nativeDet, nativeFails = 0, zxingTried = 0;
+  async function getNative() {
+    if (nativeDet !== undefined) return nativeDet;
+    nativeDet = null;
+    try {
+      if ('BarcodeDetector' in window) {
+        const have = await BarcodeDetector.getSupportedFormats();
+        if (have.includes('upc_a') || have.includes('ean_13')) {
+          nativeDet = new BarcodeDetector({ formats: NATIVE_FORMATS.filter((f) => have.includes(f)) });
+        }
+      }
+    } catch (e) { nativeDet = null; }
+    return nativeDet;
   }
+  async function loadZxing() {
+    if (zxing) return zxing;
+    if (Date.now() - zxingTried < 15000) return null;
+    zxingTried = Date.now();
+    try { zxing = await import(ZXING_URL); } catch (e) {}
+    return zxing;
+  }
+  // The middle band of the actual video, the part inside the box on screen.
+  function camBand(v) {
+    const w = Math.round(v.videoWidth * 0.9);
+    const h = Math.round(Math.min(v.videoHeight * 0.5, v.videoWidth * 0.45));
+    return { x: Math.round((v.videoWidth - w) / 2), y: Math.round((v.videoHeight - h) / 2), w, h };
+  }
+  async function readFrame() {
+    const v = camVideo;
+    if (!v || !v.videoWidth || !v.offsetWidth || document.hidden) return '';
+    // The same frame twice would count as two "reads" of one blurry picture.
+    if (v.currentTime === camFrameAt) return '';
+    camFrameAt = v.currentTime;
+    const b = camBand(v);
+    if (camCanvas.width !== b.w) camCanvas.width = b.w;
+    if (camCanvas.height !== b.h) camCanvas.height = b.h;
+    camCtx.drawImage(v, b.x, b.y, b.w, b.h, 0, 0, b.w, b.h);
+    const det = await getNative();
+    if (det) {
+      try {
+        const found = await det.detect(camCanvas);
+        nativeFails = 0;
+        if (found.length) return normCode(found[0].rawValue);
+      } catch (e) {
+        if (++nativeFails > 5) nativeDet = null;
+      }
+      // Built-in reader came up empty: give zxing every third frame.
+      if (++camZxTick % 3 || !zxing) return '';
+    }
+    const zx = await loadZxing();
+    if (!zx) return '';
+    const found = await zx.readBarcodes(camCtx.getImageData(0, 0, b.w, b.h), ZX_OPTS);
+    return found.length ? normCode(found[0].text) : '';
+  }
+  function onCamRead(text) {
+    // A blurry frame can read as a different, valid barcode (2026-10-31:
+    // 680226075466 came back 380126075466), so one read isn't enough.
+    camHits = text === camSeen ? camHits + 1 : 1;
+    camSeen = text;
+    camLastHit = Date.now();
+    if (camHits < READS_NEEDED) return;
+    camDone = true;
+    if (navigator.vibrate) navigator.vibrate(80);
+    pauseCam();
+    $('barcode').value = text;
+    lookup(text);
+  }
+  async function camTick(id) {
+    if (id !== camLoopId || camPaused || camDone || !camStream) return;
+    const t0 = performance.now();
+    let text = '';
+    if (!camDecoding) {     // never two decodes at once
+      camDecoding = true;
+      try { text = await readFrame(); } catch (e) {}
+      camDecoding = false;
+    }
+    if (id !== camLoopId || camPaused || camDone || !camStream) return;
+    if (text) onCamRead(text);
+    if (camDone) return;
+    // A slow decode gets an equal rest, so the page stays usable.
+    camLoop = setTimeout(() => camTick(id), Math.max(60, performance.now() - t0));
+  }
+
+  // ---- focus, zoom and light: one change at a time, and a phone saying no is fine.
+  // applyConstraints replaces whatever was set before, so every call sends all of it.
+  function camApply(change) {
+    Object.assign(camWanted, change);
+    if (camApplyWaiting) return camApplyQ;
+    camApplyWaiting = true;
+    const track = camTrack();
+    camApplyQ = camApplyQ.then(() => {
+      camApplyWaiting = false;
+      if (!track || track !== camTrack() || track.readyState !== 'live') return null;
+      const w = camWanted, adv = [];
+      if (w.zoom !== undefined) adv.push({ zoom: w.zoom });
+      if (w.torch !== undefined) adv.push({ torch: w.torch });
+      if (w.poi) adv.push({ pointsOfInterest: [w.poi] });
+      if (w.focusMode) {
+        const f = { focusMode: w.focusMode };
+        if (w.focusMode === 'manual' && w.focusDistance !== undefined) f.focusDistance = w.focusDistance;
+        adv.push(f);
+      }
+      return Promise.race([track.applyConstraints({ ...WANT, advanced: adv }), wait(2000)]);
+    }).catch(() => {});
+    return camApplyQ;
+  }
+  // Continuous autofocus can sit still and never hunt, so ask for a fresh sweep.
+  // A sweep then holds that focus until the next one, which keeps a good picture
+  // steady for the three reads; continuous first makes each one a real change.
+  function camSweepNow(poi) {
+    if (camManual || !camStream) return;
+    camLastSweep = Date.now();
+    const p = camPoi ? { poi: poi || { x: 0.5, y: 0.5 } } : {};
+    const hasCont = camFocusModes.includes('continuous');
+    if (!camFocusModes.includes('single-shot')) {
+      if (hasCont && poi) camApply({ focusMode: 'continuous', ...p });
+      return;
+    }
+    const track = camTrack();
+    (hasCont ? camApply({ focusMode: 'continuous', ...p }).then(() => wait(120)) : Promise.resolve())
+      .then(() => { if (track === camTrack() && !camManual) camApply({ focusMode: 'single-shot', ...p }); });
+  }
+  $('reader').addEventListener('click', (e) => {
+    const v = camVideo;
+    if (!v || !camStream || !v.videoWidth) return;
+    const r = v.getBoundingClientRect();
+    const scale = r.width / v.videoWidth;
+    const y = ((e.clientY - r.top - r.height / 2) / scale + v.videoHeight / 2) / v.videoHeight;
+    camSweepNow({ x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, y)) });
+  });
+
+  function camShowInfo() {
+    const track = camTrack(), v = camVideo;
+    if (!track || !v) return;
+    const s = track.getSettings ? track.getSettings() : {};
+    const i = camLenses.findIndex((l) => l.deviceId === s.deviceId);
+    const fd = camCaps.focusDistance;
+    const lines = [
+      'Lens: ' + (track.label || 'unknown') + (i >= 0 ? ' (' + (i + 1) + ' of ' + camLenses.length + ')' : '') +
+        ' · ' + v.videoWidth + 'x' + v.videoHeight,
+      'Focus: ' + (camFocusModes.join(', ') || 'none reported') +
+        (fd ? ' · range ' + fd.min + '-' + fd.max : '') +
+        ' · now ' + (s.focusMode || '?') + (s.focusDistance !== undefined ? ' at ' + s.focusDistance : ''),
+      'Reader: ' + (nativeDet ? 'built-in + zxing' : 'zxing') +
+        (camCaps.zoom ? ' · zoom to ' + camCaps.zoom.max : ' · no zoom'),
+    ];
+    $('camInfo').textContent = lines.join('\n');
+  }
+  function camLayoutGuide() {
+    const v = camVideo;
+    if (!v || !camGuide || !v.videoWidth || !v.clientWidth) return;
+    camGuide.style.height = Math.round(camBand(v).h * (v.clientWidth / v.videoWidth)) + 'px';
+  }
+  function camFocusRow() {
+    const box = $('camFocus');
+    box.innerHTML = '';
+    box.classList.add('hidden');
+    const fd = camCaps.focusDistance;
+    if (!fd || !camFocusModes.includes('manual') || !(fd.max > fd.min)) return;
+    // Near to far on a log scale: the range can run to hundreds of metres and
+    // everything that matters here is in the first foot.
+    const lo = Math.max(fd.min, 0.01), hi = Math.max(Math.min(fd.max, 10), lo * 1.01);
+    const span = (txt) => { const el = document.createElement('span'); el.className = 'meta'; el.style.margin = '0'; el.textContent = txt; return el; };
+    const slider = document.createElement('input');
+    slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.value = '30';
+    slider.setAttribute('aria-label', 'Focus distance');
+    const auto = document.createElement('button');
+    auto.className = 'ghost small';
+    auto.textContent = 'Auto';
+    auto.style.fontWeight = '700';
+    slider.oninput = () => {
+      let d = lo * Math.pow(hi / lo, Number(slider.value) / 100);
+      if (fd.step > 0) d = fd.min + Math.round((d - fd.min) / fd.step) * fd.step;
+      d = Math.min(fd.max, Math.max(fd.min, d));
+      camManual = true;
+      auto.style.fontWeight = '';
+      camApply({ focusMode: 'manual', focusDistance: d });
+    };
+    auto.onclick = () => {
+      camManual = false;
+      auto.style.fontWeight = '700';
+      camLastSweep = 0;
+      camApply({ focusMode: camFocusModes.includes('continuous') ? 'continuous' : camFocusModes[0] });
+    };
+    box.append(span('Near'), slider, span('Far'), auto);
+    box.classList.remove('hidden');
+  }
+  // Only what this phone's camera says it can do.
   function setUpCamTools() {
     const box = $('camTools');
     box.innerHTML = '';
     box.classList.add('hidden');
     const track = camTrack();
-    const caps = track && track.getCapabilities ? track.getCapabilities() : {};
-    const apply = (c) => track.applyConstraints({ advanced: [c] }).catch(() => {});
-    const focusModes = caps.focusMode || [];
-    if (focusModes.includes('continuous')) apply({ focusMode: 'continuous' });
+    if (!track) return;
+    try { camCaps = track.getCapabilities ? track.getCapabilities() : {}; } catch (e) { camCaps = {}; }
+    camFocusModes = camCaps.focusMode || [];
+    camManual = false;
+    camWanted = {};
+    let supported = {};
+    try { supported = navigator.mediaDevices.getSupportedConstraints() || {}; } catch (e) {}
+    camPoi = !!(supported.pointsOfInterest || camCaps.pointsOfInterest);
 
-    if (focusModes.includes('single-shot')) {
-      const v = $('reader').querySelector('video');
-      v.addEventListener('click', (e) => {
-        const r = v.getBoundingClientRect();
-        const c = { focusMode: 'single-shot' };
-        if (caps.pointsOfInterest) c.pointsOfInterest = [{ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }];
-        apply(c).then(() => {
-          if (focusModes.includes('continuous')) setTimeout(() => { if (camTrack() === track) apply({ focusMode: 'continuous' }); }, 2000);
-        });
-      });
-    }
-    if (caps.zoom && caps.zoom.max > 1) {
-      const levels = [1, 2, 3].filter((z) => z >= caps.zoom.min && z <= caps.zoom.max);
+    if (camCaps.zoom && camCaps.zoom.max > 1) {
+      const levels = [1, 2, 3].filter((z) => z >= camCaps.zoom.min && z <= camCaps.zoom.max);
       const buttons = levels.map((z) => {
         const b = document.createElement('button');
         b.className = 'ghost small';
         b.textContent = z + 'x';
         b.onclick = () => {
-          apply({ zoom: z });
+          camApply({ zoom: z });
           buttons.forEach((o) => { o.style.fontWeight = o === b ? '700' : ''; });
         };
         box.appendChild(b);
@@ -523,89 +731,169 @@
       const start = buttons[levels.indexOf(2)];
       if (start) start.click();
     }
-    if (caps.torch) {
+    if (camFocusModes.includes('continuous')) camApply({ focusMode: 'continuous' });
+    if (camCaps.torch) {
       let on = false;
       const b = document.createElement('button');
       b.className = 'ghost small';
       b.textContent = 'Light';
-      b.onclick = () => { on = !on; apply({ torch: on }); b.style.fontWeight = on ? '700' : ''; };
+      b.onclick = () => { on = !on; camApply({ torch: on }); b.style.fontWeight = on ? '700' : ''; };
+      box.appendChild(b);
+    }
+    if (camLenses.length > 1) {
+      const s = track.getSettings ? track.getSettings() : {};
+      const i = camLenses.findIndex((l) => l.deviceId === s.deviceId);
+      const b = document.createElement('button');
+      b.className = 'ghost small';
+      b.textContent = 'Lens ' + (i + 1) + '/' + camLenses.length;
+      b.onclick = () => nextLens(i);
       box.appendChild(b);
     }
     if (box.children.length) box.classList.remove('hidden');
+    camFocusRow();
+    camLastSweep = Date.now() - SWEEP_MS + 1200;   // first sweep once zoom has settled
+    camShowInfo();
   }
 
-  const READS_NEEDED = 3;
-  const CAM_IDLE_MS = 2 * 60 * 1000;   // let the camera go after this long between scans
-  let camBusy = false, camPaused = false, camDone = false, camSeen = '', camHits = 0, camIdle = null;
+  // ---- opening and closing
+  function openStream(deviceId) {
+    const video = deviceId ? { ...WANT, deviceId: { exact: deviceId } }
+      : { ...WANT, facingMode: { ideal: 'environment' } };
+    return navigator.mediaDevices.getUserMedia({ video, audio: false });
+  }
+  function closeStream() {
+    if (camStream) camStream.getTracks().forEach((t) => { try { t.stop(); } catch (e) {} });
+    camStream = null;
+    camWanted = {};
+    camApplyQ = Promise.resolve();
+    camApplyWaiting = false;
+  }
+  // Open a lens and put it on the one video element, or take the default back camera.
+  async function useLens(deviceId, gen) {
+    closeStream();   // a phone won't run two back cameras at once
+    let stream;
+    try { stream = await openStream(deviceId); }
+    catch (e) { if (!deviceId) throw e; stream = await openStream(null); }
+    if (gen !== camGen) { stream.getTracks().forEach((t) => t.stop()); return false; }
+    camStream = stream;
+    camVideo.srcObject = stream;
+    await camVideo.play();
+    return true;
+  }
+  // Which back cameras there are, main lens first.  Android calls them
+  // "camera2 0, facing back", and the lowest number is the main lens; the others
+  // are often an ultra-wide with no autofocus at all.
+  async function findLenses() {
+    if (!IS_ANDROID) return;
+    let devs = [];
+    try { devs = await navigator.mediaDevices.enumerateDevices(); } catch (e) { return; }
+    const num = (d) => { const m = /camera2?\s*(\d+)/i.exec(d.label); return m ? Number(m[1]) : 99; };
+    camLenses = devs.filter((d) => d.kind === 'videoinput' && /back|rear|environment/i.test(d.label))
+      .sort((a, b) => num(a) - num(b));
+  }
+  async function nextLens(i) {
+    if (camBusy || !camLenses.length) return;
+    camBusy = true;
+    const gen = camGen, next = camLenses[(i + 1) % camLenses.length];
+    clearTimeout(camWatch);
+    try {
+      store.set('lens', next.label);
+      camLensId = next.deviceId;
+      camSeen = ''; camHits = 0;
+      if (await useLens(next.deviceId, gen)) {
+        setUpCamTools();
+        watchCam(true);
+      }
+    } catch (e) {
+      note('msg', 'bad', 'That lens would not start. Tap Scan with camera to try again.');
+      await stopCam();
+    } finally { camBusy = false; }
+  }
+  function startLoops() {
+    clearTimeout(camLoop);
+    clearInterval(camTimer);
+    const id = ++camLoopId;
+    camTick(id);
+    camTimer = setInterval(() => {
+      camShowInfo();
+      if (camManual || document.hidden) return;
+      if (Date.now() - camLastHit < 1500) return;      // mid-read: don't blur it
+      if (Date.now() - camLastSweep < SWEEP_MS) return;
+      camSweepNow();
+    }, 1000);
+  }
+  function stopLoops() {
+    camLoopId++;
+    clearTimeout(camLoop);
+    clearInterval(camTimer);
+  }
 
-  // ---- camera (html5-qrcode: zxing under the hood, works on iPhone Safari)
-  let camWatch = null;
   async function startCam(retry) {
     if (camBusy) return;
     camBusy = true;
     try { await startCamInner(retry); } finally { camBusy = false; }
   }
   async function startCamInner(retry) {
-    // Already open and paused from the last scan: just pick back up.  Reopening
-    // the camera for every scan is what ran the phone out of room.
-    if (scanner && camPaused) {
-      clearTimeout(camIdle);
-      camDone = false; camSeen = ''; camHits = 0;
+    // Already running: nothing to reopen.
+    if (camStream && !camPaused && camLive()) {
       $('camWrap').classList.remove('hidden');
-      const v = $('reader').querySelector('video');
+      return;
+    }
+    // Open and paused from the last scan: just pick back up.  Reopening the
+    // camera for every scan is what ran the phone out of room.
+    if (camStream && camPaused && camLive()) {
+      clearTimeout(camIdle);
+      camDone = false; camSeen = ''; camHits = 0; camLastHit = 0;
+      $('camWrap').classList.remove('hidden');
       try {
-        if (v) await v.play();
-        scanner.resume();
+        await camVideo.play();
         camPaused = false;
+        camLayoutGuide();
+        camLastSweep = 0;    // the next barcode is at a new distance
+        startLoops();
         watchCam(retry);
         return;
       } catch (e) { /* fall through and open it fresh */ }
     }
     await stopCam();
-    if (typeof Html5Qrcode === 'undefined') return note('msg', 'bad', 'Camera scanner did not load. Type the barcode instead.');
+    const gen = ++camGen;
     $('camWrap').classList.remove('hidden');
-    scanner = new Html5Qrcode('reader', {
-      verbose: false,
-      formatsToSupport: FORMATS(),
-      experimentalFeatures: { useBarCodeDetectorIfSupported: true },
-    });
-    camDone = false; camSeen = ''; camHits = 0; camPaused = false;
+    camDone = false; camSeen = ''; camHits = 0; camLastHit = 0; camPaused = false; camFrameAt = -1;
     try {
-      await scanner.start({ facingMode: 'environment' },
-        { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.9), height: Math.floor(Math.min(h * 0.5, w * 0.45)) }),
-          // Sharper frames are what let a small code read from further back,
-          // where the lens can actually focus.
-          videoConstraints: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
-        (text) => {
-          if (camDone) return;
-          // A blurry frame can read as a different, valid barcode (2026-10-31:
-          // 680226075466 came back 380126075466), so one read isn't enough.
-          camHits = text === camSeen ? camHits + 1 : 1;
-          camSeen = text;
-          if (camHits < READS_NEEDED) return;
-          camDone = true;
-          if (navigator.vibrate) navigator.vibrate(80);
-          pauseCam();
-          $('barcode').value = text;
-          lookup(text);
-        },
-        () => {});
+      camVideo = document.createElement('video');
+      camVideo.setAttribute('playsinline', '');
+      camVideo.setAttribute('muted', '');
+      camVideo.muted = true;
+      camVideo.addEventListener('loadedmetadata', () => { camLayoutGuide(); camShowInfo(); });
+      camGuide = document.createElement('div');
+      camGuide.id = 'camGuide';
+      $('reader').append(camVideo, camGuide);
+      if (!(await useLens(camLensId, gen))) return;
+      await findLenses();
+      if (gen !== camGen) return;
+      const saved = store.get('lens');
+      const target = camLenses.find((l) => l.label === saved) || camLenses[0];
+      const t = camTrack(), cur = t && t.getSettings ? t.getSettings().deviceId : null;
+      if (target) {
+        camLensId = target.deviceId;
+        if (target.deviceId !== cur && !(await useLens(target.deviceId, gen))) return;
+      }
       setUpCamTools();
+      camLayoutGuide();
+      getNative().then(camShowInfo);
+      loadZxing();           // ready before the first frame the built-in reader misses
+      startLoops();
       watchCam(retry);
     } catch (e) {
-      $('camWrap').classList.add('hidden');
+      if (gen !== camGen) return;
+      await stopCam();
       note('msg', 'bad', 'Camera would not start: ' + (e && e.message ? e.message : e) +
         '. On iPhone, allow camera for this site in Safari settings.');
-      scanner = null;
     }
   }
-  // html5-qrcode leaves its <video> holding the stream after stop.  Every scan
-  // used to strand one, and after a dozen or so the phone's camera went blank
-  // (2026-10-31; the test browser crashed at about 15).  Let go of it by hand.
   function releaseVideo(v) {
     if (!v) return;
     try {
-      if (v.srcObject) v.srcObject.getTracks().forEach((t) => t.stop());
       v.pause();
       v.srcObject = null;
       v.load();
@@ -614,40 +902,50 @@
   }
   function pauseCam() {
     clearTimeout(camWatch);
-    try { scanner.pause(true); camPaused = true; } catch (e) { stopCam(); return; }
+    stopLoops();
+    camPaused = true;
+    try { camVideo.pause(); } catch (e) {}
     $('camWrap').classList.add('hidden');
     clearTimeout(camIdle);
     camIdle = setTimeout(stopCam, CAM_IDLE_MS);
   }
   async function stopCam() {
+    camGen++;
     clearTimeout(camWatch);
     clearTimeout(camIdle);
+    stopLoops();
     camPaused = false;
-    const s = scanner;
-    scanner = null;
-    const v = $('reader').querySelector('video');
-    if (s) { try { await s.stop(); } catch (e) {} }
-    releaseVideo(v);
-    if (s) { try { s.clear(); } catch (e) {} }
+    closeStream();
+    releaseVideo(camVideo);
+    camVideo = null; camGuide = null;
     $('reader').innerHTML = '';
     $('camTools').innerHTML = '';
     $('camTools').classList.add('hidden');
+    $('camFocus').innerHTML = '';
+    $('camFocus').classList.add('hidden');
+    $('camInfo').textContent = '';
     $('camWrap').classList.add('hidden');
   }
 
   // A camera that started but shows nothing: restart it once, then say so.
   function watchCam(retry) {
     clearTimeout(camWatch);
-    const v = $('reader').querySelector('video');
-    const was = v ? v.currentTime : 0;
+    const was = camVideo ? camVideo.currentTime : 0;
     camWatch = setTimeout(async () => {
-      const now = $('reader').querySelector('video');
-      if (!scanner || camPaused || (now && now.videoWidth > 0 && now.currentTime > was)) return;
+      if (!camStream || camPaused || document.hidden) return;
+      if (camVideo && camVideo.videoWidth > 0 && camVideo.currentTime > was) return;
       await stopCam();
       if (retry) return startCam(false);
       note('msg', 'bad', 'The camera is showing blank. Close the app and reopen it, or use Take a photo of the barcode.');
     }, 4000);
   }
+  // Coming back from another app can leave the picture frozen.
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden || !camStream || camPaused || !camVideo) return;
+    camVideo.play().catch(() => {});
+    watchCam(true);
+  });
+  window.addEventListener('resize', camLayoutGuide);
 
   $('camGo').onclick = () => startCam(true);
   $('camStop').onclick = stopCam;
