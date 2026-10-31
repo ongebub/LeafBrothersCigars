@@ -109,9 +109,12 @@ module.exports = async function handler(req, res) {
           is_test: !!body.is_test,
         };
 
+        // A photo comes with an unknown barcode, or with an item Square has no
+        // barcode for.
+        if (body.photo) entry.photo = body.photo;
+
         if (how === 'unknown') {
           entry.typed_text = body.typed_text;
-          if (body.photo) entry.photo = body.photo;
         } else {
           // Names come from Square, never from the browser.
           const rec = await cat.findVariation(shop, String(body.variation_id || ''));

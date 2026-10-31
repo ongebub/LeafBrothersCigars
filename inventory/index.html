@@ -111,7 +111,13 @@
       <div style="margin-top:10px"><button id="camGo" class="ghost" style="width:100%">Scan with camera</button></div>
       <div id="camWrap" class="hidden" style="margin-top:10px">
         <div id="reader"></div>
+        <div class="meta" style="margin-top:6px">Small barcode? Hold the phone about 6 inches back and zoom in. Tap the picture to refocus.</div>
+        <div id="camTools" class="row hidden" style="margin-top:8px"></div>
         <div style="margin-top:8px"><button id="camStop" class="ghost small">Stop camera</button></div>
+      </div>
+      <div style="margin-top:10px">
+        <label for="snap">Camera won't read it? Take a photo of the barcode</label>
+        <input id="snap" type="file" accept="image/*" capture="environment">
       </div>
       <label for="q">No barcode? Search by name</label>
       <input id="q" autocomplete="off" placeholder="e.g. Padron 1964 Exclusivo" enterkeyhint="search">
@@ -125,6 +131,12 @@
       <div class="big" id="cItem"></div>
       <div class="sub" id="cVar"></div>
       <div class="meta" id="cMeta"></div>
+      <div id="cNoCode" class="hidden" style="margin-top:10px">
+        <div class="msg warn">We don't have a barcode for this one. Take a picture of the barcode while you're here. If it doesn't have one, get the band.</div>
+        <label for="cPhoto">Photo</label>
+        <input id="cPhoto" type="file" accept="image/*" capture="environment">
+        <img id="cThumb" class="thumb hidden" alt="">
+      </div>
       <label for="cCount">How many?</label>
       <input id="cCount" class="count" inputmode="numeric" pattern="[0-9]*" autocomplete="off">
       <div class="row" style="margin-top:12px">
@@ -181,6 +193,7 @@
   let current = null;      // the variation being confirmed
   let lastBarcode = '';    // what was scanned, for the record
   let photoData = null;
+  let photoBarcode = '';   // a barcode read off the no-barcode photo, if any
   let scanner = null;
 
   async function api(action, payload) {
@@ -260,7 +273,9 @@
 
   // ---- counting
   function resetCard() {
-    current = null; lastBarcode = ''; photoData = null;
+    current = null; lastBarcode = ''; photoData = null; photoBarcode = '';
+    $('cPhoto').value = ''; $('cThumb').classList.add('hidden'); $('cNoCode').classList.add('hidden');
+    $('snap').value = '';
     $('confirm').classList.add('hidden');
     $('unknown').classList.add('hidden');
     $('scanCard').classList.remove('hidden');
@@ -281,6 +296,7 @@
     if (rec.upc && rec.upc !== rec.sku) bits.push('UPC ' + rec.upc);
     if (rec.price != null) bits.push('$' + (rec.price / 100).toFixed(2));
     $('cMeta').textContent = bits.join(' · ');
+    $('cNoCode').classList.toggle('hidden', !!(rec.sku || rec.upc));
     $('confirm').classList.remove('hidden');
     $('cCount').value = '';
     setTimeout(() => $('cCount').focus(), 50);
@@ -360,6 +376,7 @@
         ? entry.item_name + ' ' + (entry.variation_name || '') : '"' + entry.typed_text + '"');
       if (entry.status === 'matched_by_aurora') text += ' (Aurora matched it)';
       if (entry.status === 'needs_chris' || entry.status === 'pending') text += ' (Chris will sort out what it is)';
+      if (payload.how !== 'unknown' && entry.has_photo) text += '. Photo saved for Chris.';
       note('msg', 'ok', text);
       resetCard();
       loadMine();
@@ -370,8 +387,8 @@
   $('cSave').onclick = () => {
     const n = readCount('cCount');
     if (n == null) return note('msg', 'bad', 'Type the count as a number.');
-    submit({ how: lastBarcode ? 'scan' : 'search', barcode: lastBarcode || null,
-             variation_id: current.variation_id, count: n }, $('cSave'));
+    submit({ how: lastBarcode ? 'scan' : 'search', barcode: lastBarcode || photoBarcode || null,
+             photo: photoData, variation_id: current.variation_id, count: n }, $('cSave'));
   };
   $('cCount').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('cSave').click(); });
   $('cCancel').onclick = () => { note('msg', '', ''); resetCard(); };
@@ -386,45 +403,148 @@
   $('uCancel').onclick = () => { note('msg', '', ''); resetCard(); };
 
   // Photo: shrink on the phone so it uploads fast on cell data.
-  $('uPhoto').addEventListener('change', () => {
-    const f = $('uPhoto').files[0];
-    photoData = null;
-    if (!f) return;
-    const img = new Image();
-    const url = URL.createObjectURL(f);
-    img.onload = () => {
-      const max = 1000, s = Math.min(1, max / Math.max(img.width, img.height));
-      const c = document.createElement('canvas');
-      c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
-      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-      photoData = c.toDataURL('image/jpeg', 0.7);
-      $('uThumb').src = photoData; $('uThumb').classList.remove('hidden');
-      URL.revokeObjectURL(url);
-    };
-    img.onerror = () => note('msg', 'bad', 'Could not read that photo.');
-    img.src = url;
+  function wirePhoto(inputId, thumbId, onFile) {
+    $(inputId).addEventListener('change', () => {
+      const f = $(inputId).files[0];
+      photoData = null;
+      if (!f) return;
+      const img = new Image();
+      const url = URL.createObjectURL(f);
+      img.onload = () => {
+        const max = 1000, s = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * s); c.height = Math.round(img.height * s);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        photoData = c.toDataURL('image/jpeg', 0.7);
+        $(thumbId).src = photoData; $(thumbId).classList.remove('hidden');
+        URL.revokeObjectURL(url);
+      };
+      img.onerror = () => note('msg', 'bad', 'Could not read that photo.');
+      img.src = url;
+      if (onFile) onFile(f);
+    });
+  }
+  wirePhoto('uPhoto', 'uThumb');
+  // The flagged item's photo: if a barcode can be read off it, keep that too.
+  wirePhoto('cPhoto', 'cThumb', async (f) => {
+    photoBarcode = '';
+    const code = await readBarcodeFile(f);
+    if (code && $('cPhoto').files[0] === f) photoBarcode = code;
   });
+
+  const FORMATS = () => {
+    const F = Html5QrcodeSupportedFormats;
+    return [F.UPC_A, F.UPC_E, F.EAN_13, F.EAN_8, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE];
+  };
+
+  // A photo from the phone's own camera app, which focuses far better up close
+  // than a live web video can.  Read with zxing-wasm, loaded only when a photo is
+  // taken: html5-qrcode's decoder read nothing when a label sat on a dark box
+  // (tested 2026-10-31, at any size), and this one reads those, small or sideways.
+  let zxing = null;
+  async function readBarcodeFile(file) {
+    try {
+      if (!zxing) zxing = await import('https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.5/dist/es/reader/index.js');
+      const found = await zxing.readBarcodes(file, {
+        formats: ['UPC-A', 'UPC-E', 'EAN-13', 'EAN-8', 'Code128', 'Code39', 'ITF', 'QRCode'],
+        tryHarder: true, maxNumberOfSymbols: 1,
+      });
+      if (!found.length) return '';
+      // A UPC comes back as a 13-digit EAN with a leading zero; keep the UPC.
+      const text = found[0].text;
+      return /^0\d{12}$/.test(text) ? text.slice(1) : text;
+    } catch (e) { return ''; }
+  }
+
+  $('snap').addEventListener('change', async () => {
+    const f = $('snap').files[0];
+    if (!f) return;
+    await stopCam();
+    note('msg', 'warn', 'Reading the photo...');
+    const code = await readBarcodeFile(f);
+    $('snap').value = '';
+    if (!code) return note('msg', 'bad', 'Could not read a barcode in that photo. Try again a little further back, or search by name.');
+    note('msg', '', '');
+    $('barcode').value = code;
+    lookup(code);
+  });
+
+  // ---- camera tools: only what this phone's camera says it can do
+  function camTrack() {
+    const v = $('reader').querySelector('video');
+    return v && v.srcObject ? v.srcObject.getVideoTracks()[0] : null;
+  }
+  function setUpCamTools() {
+    const box = $('camTools');
+    box.innerHTML = '';
+    box.classList.add('hidden');
+    const track = camTrack();
+    const caps = track && track.getCapabilities ? track.getCapabilities() : {};
+    const apply = (c) => track.applyConstraints({ advanced: [c] }).catch(() => {});
+    const focusModes = caps.focusMode || [];
+    if (focusModes.includes('continuous')) apply({ focusMode: 'continuous' });
+
+    if (focusModes.includes('single-shot')) {
+      const v = $('reader').querySelector('video');
+      v.addEventListener('click', (e) => {
+        const r = v.getBoundingClientRect();
+        const c = { focusMode: 'single-shot' };
+        if (caps.pointsOfInterest) c.pointsOfInterest = [{ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }];
+        apply(c).then(() => {
+          if (focusModes.includes('continuous')) setTimeout(() => { if (camTrack() === track) apply({ focusMode: 'continuous' }); }, 2000);
+        });
+      });
+    }
+    if (caps.zoom && caps.zoom.max > 1) {
+      const levels = [1, 2, 3].filter((z) => z >= caps.zoom.min && z <= caps.zoom.max);
+      const buttons = levels.map((z) => {
+        const b = document.createElement('button');
+        b.className = 'ghost small';
+        b.textContent = z + 'x';
+        b.onclick = () => {
+          apply({ zoom: z });
+          buttons.forEach((o) => { o.style.fontWeight = o === b ? '700' : ''; });
+        };
+        box.appendChild(b);
+        return b;
+      });
+      const start = buttons[levels.indexOf(2)];
+      if (start) start.click();
+    }
+    if (caps.torch) {
+      let on = false;
+      const b = document.createElement('button');
+      b.className = 'ghost small';
+      b.textContent = 'Light';
+      b.onclick = () => { on = !on; apply({ torch: on }); b.style.fontWeight = on ? '700' : ''; };
+      box.appendChild(b);
+    }
+    if (box.children.length) box.classList.remove('hidden');
+  }
 
   // ---- camera (html5-qrcode: zxing under the hood, works on iPhone Safari)
   async function startCam() {
     if (typeof Html5Qrcode === 'undefined') return note('msg', 'bad', 'Camera scanner did not load. Type the barcode instead.');
     $('camWrap').classList.remove('hidden');
-    const F = Html5QrcodeSupportedFormats;
     scanner = new Html5Qrcode('reader', {
       verbose: false,
-      formatsToSupport: [F.UPC_A, F.UPC_E, F.EAN_13, F.EAN_8, F.CODE_128, F.CODE_39, F.ITF, F.QR_CODE],
+      formatsToSupport: FORMATS(),
       experimentalFeatures: { useBarCodeDetectorIfSupported: true },
     });
     let done = false;
     try {
       await scanner.start({ facingMode: 'environment' },
-        { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.9), height: Math.floor(Math.min(h * 0.5, w * 0.45)) }) },
+        { fps: 10, qrbox: (w, h) => ({ width: Math.floor(w * 0.9), height: Math.floor(Math.min(h * 0.5, w * 0.45)) }),
+          // Sharper frames are what let a small code read from further back,
+          // where the lens can actually focus.
+          videoConstraints: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } },
         (text) => {
           if (done) return; done = true;
           if (navigator.vibrate) navigator.vibrate(80);
           stopCam().then(() => { $('barcode').value = text; lookup(text); });
         },
         () => {});
+      setUpCamTools();
     } catch (e) {
       $('camWrap').classList.add('hidden');
       note('msg', 'bad', 'Camera would not start: ' + (e && e.message ? e.message : e) +
