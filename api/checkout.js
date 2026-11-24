@@ -21,10 +21,10 @@ function cleanPartner(raw) {
 }
 
 // Thanksgiving 2026 special (Chris, 2026-11-24): a NEW Lounge member who signs
-// up Wed 11-25 through Fri 11-28, Central time, pays $19 for the first month
+// up Wed 11-25 through Fri 11-27, Central time, pays $19 for the first month
 // and the normal $39 from the first renewal.  The discount is the Stripe coupon
-// THANKS19LOUNGE ($20 off, duration once, Lounge product only), which Chris
-// created in the dashboard.  "New" means this email has never had a Stripe
+// THANKS19LOUNGE ($20 off, duration once, Lounge product only, redeem_by
+// Fri 11-27 23:59:59 CST), created 2026-11-24 via the Stripe connector.  "New" means this email has never had a Stripe
 // subscription of any status.  Outside the window, or if anything about the
 // check fails, checkout goes through at the normal price -- the promo can
 // never block a signup.
@@ -32,7 +32,7 @@ const PROMO = {
   coupon: 'THANKS19LOUNGE',
   tier: 'lounge',
   start: Date.parse('2026-11-25T06:00:00Z'),  // Wed 11-25 00:00 CST
-  end: Date.parse('2026-11-29T06:00:00Z'),    // Sat 11-28 24:00 CST
+  end: Date.parse('2026-11-28T06:00:00Z'),    // Fri 11-27 24:00 CST
 };
 
 async function promoDiscount(stripe, tier, existingCustomer, now = Date.now()) {
