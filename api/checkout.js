@@ -20,7 +20,31 @@ function cleanPartner(raw) {
   return raw.replace(/\s+/g, ' ').trim().slice(0, PARTNER_MAX).trim() || null;
 }
 
-module.exports = async function handler(req, res) {
+// Thanksgiving 2026 special (Chris, 2026-11-24): a NEW Lounge member who signs
+// up Wed 11-25 through Fri 11-28, Central time, pays $19 for the first month
+// and the normal $39 from the first renewal.  The discount is the Stripe coupon
+// THANKS19LOUNGE ($20 off, duration once, Lounge product only), which Chris
+// created in the dashboard.  "New" means this email has never had a Stripe
+// subscription of any status.  Outside the window, or if anything about the
+// check fails, checkout goes through at the normal price -- the promo can
+// never block a signup.
+const PROMO = {
+  coupon: 'THANKS19LOUNGE',
+  tier: 'lounge',
+  start: Date.parse('2026-11-25T06:00:00Z'),  // Wed 11-25 00:00 CST
+  end: Date.parse('2026-11-29T06:00:00Z'),    // Sat 11-28 24:00 CST
+};
+
+async function promoDiscount(stripe, tier, existingCustomer, now = Date.now()) {
+  if (tier !== PROMO.tier || now < PROMO.start || now >= PROMO.end) return null;
+  if (existingCustomer) {
+    const subs = await stripe.subscriptions.list({ customer: existingCustomer.id, status: 'all', limit: 1 });
+    if (subs.data.length) return null;
+  }
+  return [{ coupon: PROMO.coupon }];
+}
+
+const handler = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { tier, name, email, phone, home_location, locker_partner, key_fee_agreed, rules_ack, ankeny_locker_ack } = req.body || {};
@@ -92,7 +116,7 @@ module.exports = async function handler(req, res) {
     const subMeta = Object.keys(extra).length ? { ...meta, ...extra } : meta;
 
     const site = process.env.NEXT_PUBLIC_SITE_URL;
-    const session = await stripe.checkout.sessions.create({
+    const sessionParams = {
       mode: 'subscription',
       customer: customer.id,
       line_items: [{ price: price.id, quantity: 1 }],
@@ -100,7 +124,25 @@ module.exports = async function handler(req, res) {
       metadata: subMeta,
       success_url: `${site}/?welcome=1`,
       cancel_url: `${site}/`,
-    });
+    };
+
+    let discounts = null;
+    try {
+      discounts = await promoDiscount(stripe, tier, found.data[0]);
+    } catch (err) {
+      console.error('[checkout] promo check failed, normal price:', err.message);
+    }
+
+    let session;
+    if (discounts) {
+      try {
+        session = await stripe.checkout.sessions.create({ ...sessionParams, discounts });
+        console.log('[checkout] promo applied:', PROMO.coupon);
+      } catch (err) {
+        console.error('[checkout] promo rejected, normal price:', err.message);
+      }
+    }
+    if (!session) session = await stripe.checkout.sessions.create(sessionParams);
 
     console.log('[checkout] Session created:', session.id, 'tier:', tier, 'lounge:', loc);
     res.status(200).json({ url: session.url });
@@ -113,3 +155,7 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
+module.exports = handler;
+module.exports.promoDiscount = promoDiscount;
+module.exports.PROMO = PROMO;
